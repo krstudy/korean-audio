@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>語音測試</title>
+<style>body{font:17px/1.6 system-ui,sans-serif;margin:0;padding:24px 16px;background:#fbfaf7;color:#222}
+button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid #ccc;background:#f0eee9;margin:6px 0;display:block;width:100%;max-width:320px;text-align:left}
+#st{margin-top:12px;color:#555}</style></head><body>
+<h1 style="font-size:20px">語音測試</h1>
+<p>按下面兩個按鈕，聽聽看有沒有韓文聲音。</p>
+<button data-src="test/word.mp3">🔊 먹다</button>
+<button data-src="test/ex1.mp3">🔊 例句</button>
+<p id="st"></p>
+<script>
+const a=new Audio(),st=document.getElementById("st");
+document.querySelectorAll("button").forEach(b=>b.onclick=()=>{a.src=b.dataset.src;a.play().then(()=>st.textContent="✓ 有播放").catch(e=>st.textContent="✗ "+e.name)});
+</script></body></html>
