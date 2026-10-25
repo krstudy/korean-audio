@@ -80,7 +80,11 @@ document.addEventListener("click",e=>{if(e.target.closest("#ed"))return;const b=
 function mark(ko,hl){let s=esc(ko);(hl||[]).filter(Boolean).slice().sort((a,b)=>b.length-a.length).forEach(h=>{const e=esc(h);if(e)s=s.split(e).join(`\u0000${e}\u0001`)});
   return s.replace(/\u0000/g,'<span class="hl">').replace(/\u0001/g,'</span>');}
 const ex=e=>`<div class="ex"><div class="t"><div class="k"${sa(e.ko,e.audio)}>${mark(e.ko,e.hl)}</div><div class="z">${esc(e.zh)}</div>${e.note?`<div class="note">${esc(e.note)}</div>`:""}</div>${say(e.ko,e.audio)}</div>`;
-const yo=p=>p.yo?`<span class="yo">（${esc(p.yo)}）</span>`:"";
+/* phrases show the 요 form first, dictionary form in brackets: 마셔요（물을 마시다）. Audio is of the dictionary form. */
+const yo=p=>p.yo?`<span class="yo">（${esc(p.phrase)}）</span>`:"";
+/* p.yo holds only the conjugated ending ("못 들어요" for "알람을 못 듣다"): swap it in for the same number of words at the end */
+const yoFull=p=>{if(!p.yo)return p.phrase;const y=p.yo.trim().split(/\s+/),w=p.phrase.trim().split(/\s+/);return w.length>y.length?[...w.slice(0,w.length-y.length),...y].join(" "):p.yo};
+const phx=p=>`<b${sa(p.phrase,p.audio)}>${esc(yoFull(p))}</b>${yo(p)}`;
 const rel=(lab,a,cls)=>a.length?`<section class="rsec ${cls}"><h3 class="rh"><span>${lab}</span><small>${a.length}</small></h3><ul class="rlist">${a.map(r=>`<li><div class="rrow"><b class="rw"${sa(r.word,r.audio)}>${esc(r.word)}</b><span class="rz">${esc(r.zh)}</span>${say(r.word,r.audio)}</div>${r.note?`<div class="rn">${esc(r.note)}</div>`:""}${r.examples&&r.examples.length?`<details class="fm sm"><summary>例句（${r.examples.length}）</summary>${r.examples.map(ex).join("")}</details>`:""}</li>`).join("")}</ul></section>`:"";
 const spoken=f=>String(f||"").replace(/[()]/g," ").replace(/\//g,",").replace(/\s+/g," ").replace(/^[ ,]+|[ ,]+$/g,"");
 const topicName=x=>x.theme+(x.sub?"／"+x.sub:"");
@@ -99,10 +103,10 @@ function parts(w,tk){
       <h3>意思</h3><ol class="mean">${mine.map(m=>`<li>${esc(m.zh)}</li>`).join("")}</ol>
       ${rest.length?`<div class="other"><div class="lab">其他意思</div><ul>${rest.map(m=>`<li>${esc(m.zh)} ${m.topics.length?m.topics.map(x=>TNAMES.has(x.theme)?`<button type="button" class="tg o golink" data-go-theme="${esc(x.theme)}" data-go-sub="${esc(x.sub||"")}">${esc(topicName(x))} ›</button>`:`<span class="tg o">${esc(topicName(x))}</span>`).join(" "):`<span class="tg o">未分類</span>`}</li>`).join("")}</ul></div>`:""}
       ${exs.length?`<details class="fm"><summary>例句（${exs.length}）</summary>${exs.map(ex).join("")}</details>`:""}`},
-    {k:"ph",n:"片語",c:phs.length,html:phs.map(ph=>`<div class="phc" id="ph-${esc(ph.id)}"><div class="pt"><b${sa(ph.phrase,ph.audio)}>${esc(ph.phrase)}</b>${yo(ph)}<span>${esc(ph.zh)}</span>${say(ph.phrase,ph.audio)}</div>
+    {k:"ph",n:"片語",c:phs.length,html:phs.map(ph=>`<div class="phc" id="ph-${esc(ph.id)}"><div class="pt">${phx(ph)}<span>${esc(ph.zh)}</span>${say(ph.phrase,ph.audio)}</div>
       ${ph.explanation?`<p style="margin:4px 0 6px;font-size:.88rem">${esc(ph.explanation)}</p>`:""}${ph.examples.length+ph.similar.length+ph.opposite.length?`<details class="fm sm"><summary>例句${ph.similar.length+ph.opposite.length?"・相似相反":""}</summary>${ph.examples.map(ex).join("")}
-      ${ph.similar.map(s=>`<div class="alt"><span>相似<b${sa(s.phrase,s.audio)}>${esc(s.phrase)}</b>${yo(s)}<span class="az">${esc(s.zh)}</span></span>${say(s.phrase,s.audio)}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}
-      ${ph.opposite.map(s=>`<div class="alt"><span>相反<b${sa(s.phrase,s.audio)}>${esc(s.phrase)}</b>${yo(s)}<span class="az">${esc(s.zh)}</span></span>${say(s.phrase,s.audio)}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}</details>`:""}</div>`).join("")||`<p class="note" style="padding-top:12px">還沒有片語</p>`},
+      ${ph.similar.map(s=>`<div class="alt"><span>相似${phx(s)}<span class="az">${esc(s.zh)}</span></span>${say(s.phrase,s.audio)}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}
+      ${ph.opposite.map(s=>`<div class="alt"><span>相反${phx(s)}<span class="az">${esc(s.zh)}</span></span>${say(s.phrase,s.audio)}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}</details>`:""}</div>`).join("")||`<p class="note" style="padding-top:12px">還沒有片語</p>`},
     {k:"rel",n:"近反義",c:w.synonyms.length+w.antonyms.length,html:rels?`<div class="rels">${rels}</div>`:`<p class="note" style="padding-top:12px">還沒有近義詞或反義詞</p>`},
     {k:"form",n:w.pos.includes("名詞")&&!f.stem?"助詞":"變化",c:f.forms.length,html:`${f.irregular?`<p class="note" style="margin-top:14px">${esc(f.irregular)}</p>`:""}${f.forms.length?`<div class="forms" style="margin-top:10px">${f.forms.map(x=>`<div><small>${esc(x.label)}</small><span class="fv"><b${sa(spoken(x.form),x.audio)}>${esc(x.form)}</b>${x.pron?` <i>${esc(x.pron)}</i>`:""}</span>${say(spoken(x.form),x.audio)}</div>`).join("")}</div>`:`<p class="note" style="padding-top:12px">還沒有型態變化</p>`}`}
   ];
@@ -123,7 +127,7 @@ function themePhrases(w,tk){const ids=new Set(w.meanings.filter(m=>inT(m,tk)).fl
 function sortPh(a,off){const r=rankOf(ORDER.phrases),k=x=>x[off?1:0].id+":"+x[off?2:1].id;return a.map((x,i)=>[x,r(k(x),i)]).sort((x,y)=>x[1]-y[1]).map(x=>x[0])}
 const pmatch=(p,q)=>p.phrase.includes(q)||(p.zh||"").includes(q)||(p.yo||"").includes(q);
 function phRow(tk,w,p){if(!st.visible.some(v=>v[0]===tk&&v[1]===w.id))st.visible.push([tk,w.id]);
-  return `<div class="w pr${ORG()?" org":""}" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}" data-ph="${esc(p.id)}" data-k="${esc(w.id+":"+p.id)}"><span class="pw"><span class="hw">${esc(p.phrase)}</span>${p.yo?`<span class="yo">（${esc(p.yo)}）</span>`:""}${say(p.phrase,p.audio)}<span class="zh">${esc(p.zh)}</span></span><span class="from">${esc(w.word)}</span>${ORG()?grip():`<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`}</div>`}
+  return `<div class="w pr${ORG()?" org":""}" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}" data-ph="${esc(p.id)}" data-k="${esc(w.id+":"+p.id)}"><span class="pw"><span class="hw">${esc(yoFull(p))}</span>${yo(p)}${say(p.phrase,p.audio)}<span class="zh">${esc(p.zh)}</span></span><span class="from">${esc(w.word)}</span>${ORG()?grip():`<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`}</div>`}
 function viewTabs(nw,np){const V=document.getElementById("view");V.hidden=false;
   V.innerHTML=[["word","單字",nw],["phrase","片語",np]].map(([k,n,c])=>`<button type="button" data-v="${k}" aria-pressed="${st.view===k}">${n}<small>${c}</small></button>`).join("")}
 function posTabs(pool){const P=document.getElementById("pos");P.hidden=false;const extra=[...new Set(WORDS.flatMap(w=>w.pos))].filter(p=>!POS0.includes(p));
