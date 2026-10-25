@@ -1,14 +1,463 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>語音測試</title>
-<style>body{font:17px/1.6 system-ui,sans-serif;margin:0;padding:24px 16px;background:#fbfaf7;color:#222}
-button{font:inherit;padding:12px 18px;border-radius:10px;border:1px solid #ccc;background:#f0eee9;margin:6px 0;display:block;width:100%;max-width:320px;text-align:left}
-#st{margin-top:12px;color:#555}</style></head><body>
-<h1 style="font-size:20px">語音測試</h1>
-<p>按下面兩個按鈕，聽聽看有沒有韓文聲音。</p>
-<button data-src="test/word.mp3">🔊 먹다</button>
-<button data-src="test/ex1.mp3">🔊 例句</button>
-<p id="st"></p>
+<!doctype html><html lang="zh-Hant"><head><meta name="robots" content="noindex"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>韓文學習</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column. Home shows one card per theme; inside a theme, sticky bar has back link, subcategory chips and part-of-speech tabs over one flat word list; each word is a compact row; tapping it opens a full detail sheet with tabs. */
+:root{
+  --bg:#f5f0e1; --surface:#fffaf0; --fg:#3a3a2a; --head:#4a4630; --muted:#78725a; --line:#e8e0c8;
+  --accent:#5f6638; --accent-soft:#ece9d4; --warm:#8a4b2f; --warm-soft:#f3e2d6;
+  --ko:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --ui:"Noto Sans TC","Noto Sans KR","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1a1a14; --surface:#24241b; --fg:#e6e2d0; --head:#f1edda; --muted:#b9b49c; --line:#36352a;
+  --accent:#b8bd86; --accent-soft:#303224; --warm:#c98762; --warm-soft:#3a2a20; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1a14; --surface:#24241b; --fg:#e6e2d0; --head:#f1edda; --muted:#b9b49c; --line:#36352a;
+  --accent:#b8bd86; --accent-soft:#303224; --warm:#c98762; --warm-soft:#3a2a20; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:1.3rem;margin:0;color:var(--head);text-wrap:balance}
+.lead{color:var(--muted);margin:2px 0 12px;font-size:.88rem}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ko{font-family:var(--ko)}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px 10px;display:grid;gap:8px;box-shadow:0 6px 6px -6px rgba(0,0,0,.12)}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:0 14px;min-height:46px}
+.search:focus-within{border-color:var(--accent)}
+.search svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;flex:none}
+.search input{border:0;background:none;font:inherit;font-size:16px;color:var(--fg);flex:1;min-width:0;padding:10px 0}
+.search input:focus-visible{outline:none}
+.themes{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.themes::-webkit-scrollbar{display:none}
+.tchip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:.86rem;white-space:nowrap}
+.tchip small{opacity:.65;margin-left:3px}
+.tchip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.tchip[data-empty]{color:var(--muted);border-style:dashed}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.seg button{flex:1 1 0;border:0;background:none;padding:7px 4px;font-size:.9rem;white-space:nowrap}
+.seg button small{opacity:.7;font-size:.8em;margin-left:2px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:700}
+
+.theme{padding-top:16px}
+.theme>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:4px 2px 8px;font-size:1.1rem;font-weight:700;color:var(--head)}
+.theme>summary::-webkit-details-marker{display:none}
+.theme>summary::before{content:"▾";color:var(--accent);font-size:.8em;transition:transform .15s}
+.theme:not([open])>summary::before{transform:rotate(-90deg)}
+.theme>summary .tko{font-family:var(--ko);color:var(--accent);font-size:.9rem}
+.theme>summary .cnt{color:var(--muted);font-weight:400;font-size:.88rem}
+.soon{border:1.5px dashed var(--line);border-radius:14px;padding:14px 16px;color:var(--muted);font-size:.9rem}
+.list{display:grid;gap:8px}
+.w{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0}
+.w[open]{border-color:var(--accent)}
+.w>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;min-width:0}
+.w>summary::-webkit-details-marker{display:none}
+.w .hw{font-family:var(--ko);font-size:1.2rem;font-weight:700;color:var(--head);flex:none}
+.w .zh{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos{flex:none;font-size:.74rem;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:700}
+.chev{flex:none;width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.w[open] .chev{transform:rotate(180deg)}
+@media (max-width:420px){.w .pos{display:none}}
+
+.det{padding:2px 18px 16px;border-top:1px dashed var(--line)}
+.dhead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding-top:12px}
+.dhead .big{font-family:var(--ko);font-size:2rem;font-weight:700;color:var(--head);line-height:1.2}
+.pr{color:var(--muted);font-size:.9rem}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tg{font-size:.76rem;padding:1px 8px;border-radius:6px;background:var(--warm-soft);color:var(--warm)}
+.tg.o{background:none;border:1px solid var(--line);color:var(--muted)}
+.note{color:var(--muted);font-size:.84rem}
+h3{font-size:.76rem;letter-spacing:.08em;color:var(--muted);margin:18px 0 6px;font-weight:700}
+ol.mean{margin:0;padding-left:1.3em}
+.ex{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.ex .t{min-width:0;flex:1}
+.phc .pt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.az{margin-left:8px;color:var(--fg)}
+.phc .pt .say,.alt .say{margin-left:auto}
+.alt{display:flex;align-items:center;gap:8px}
+.alt>span{min-width:0}
+.rp{flex:none;font-family:var(--ko);color:var(--muted);font-size:.85rem}
+.w .say{width:28px;height:28px}
+.ex .k{font-family:var(--ko);font-size:1rem}
+.ex .z{color:var(--muted);font-size:.86rem}
+[data-say]:not(.say){cursor:pointer;border-radius:4px;-webkit-tap-highlight-color:transparent}
+[data-say]:not(.say):active,[data-say].playing:not(.say){background:var(--accent-soft)}
+#dbg{display:none;position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;background:#222;color:#fff;font-size:14px;padding:10px 12px;border-radius:10px;text-align:center}
+.say{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;padding:0}
+.say svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rel{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 20px}
+.rel ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.rel b{font-family:var(--ko);color:var(--head);margin-right:6px}
+.rel .lab{font-size:.78rem;color:var(--muted)}
+.ph{border-left:2px solid var(--accent-soft);padding:2px 0 2px 12px;margin:10px 0}
+.ph .pt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.ph .pt b{font-family:var(--ko);font-size:1.05rem;color:var(--head)}
+.ph p{margin:2px 0 4px;font-size:.88rem}
+.alt{font-size:.82rem;color:var(--muted);margin-top:4px}
+.alt b{font-family:var(--ko);color:var(--fg);font-weight:500;margin:0 4px}
+details.fm{margin-top:14px}
+details.fm>summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.88rem}
+.forms{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:2px 16px;margin-top:6px}
+.forms div{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px dashed var(--line);min-width:0}
+.forms small{flex:none;width:7.5em;color:var(--muted);font-size:.74rem}
+.forms b{font-family:var(--ko);font-weight:500}
+.forms i{font-style:normal;color:var(--muted);font-size:.8rem}
+.other{margin-top:8px;font-size:.88rem;color:var(--muted)}
+.other ul{margin:2px 0 0;padding-left:1.2em}
+.other .lab{font-size:.78rem}
+.cats{padding-left:10px;border-left:2px solid var(--accent-soft);margin-left:4px;display:grid;gap:4px}
+details.sub>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:6px 2px;font-weight:700;color:var(--fg)}
+details.sub>summary::-webkit-details-marker{display:none}
+details.sub>summary::before{content:"▸";color:var(--accent);font-size:.8em;transition:transform .15s}
+details.sub[open]>summary::before{transform:rotate(90deg)}
+details.sub>summary .cnt{color:var(--muted);font-weight:400;font-size:.85rem}
+details.sub>.list{margin-bottom:8px}
+.subh{font-size:.86rem;font-weight:700;color:var(--accent);margin:12px 2px 6px;display:flex;gap:6px;align-items:baseline}
+.subh:first-child{margin-top:2px}
+.subh span{color:var(--muted);font-weight:400;font-size:.8rem}
+details.fm>summary{margin-top:4px}
+details.fm.sm{margin-top:2px}
+details.fm.sm>summary{font-size:.8rem;font-weight:500}
+.w{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px 10px 16px;color:var(--fg)}
+.w:hover{border-color:var(--accent)}
+.w{cursor:pointer}
+.w:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chev{transform:rotate(-90deg)}
+.hl{color:#c0392b;font-weight:700}
+:root[data-theme="dark"] .hl{color:#ff8a7a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hl{color:#ff8a7a}}
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.sheet-in{max-width:760px;margin:0 auto}
+.shead{position:sticky;top:0;z-index:2;background:var(--bg);padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:8px;display:grid;gap:10px}
+.srow{display:flex;align-items:center;gap:10px}
+.back{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px 6px 8px;color:var(--accent);font-weight:700}
+.back svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.nav{margin-left:auto;display:flex;gap:6px}
+.nav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);display:grid;place-items:center;padding:0}
+.nav button:disabled{opacity:.35;cursor:default}
+.nav svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tabs{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.tabs button{flex:1 1 0;border:0;background:none;padding:8px 4px;font-size:.9rem;white-space:nowrap}
+.tabs button small{opacity:.7;font-size:.8em;margin-left:2px}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--surface);font-weight:700}
+.sbody{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 18px 18px;margin-top:4px}
+.sbody .dhead{padding-top:14px}
+.phc{border-top:1px dashed var(--line);padding:12px 0}
+.phc:first-child{border-top:0}
+.phc .pt b{font-family:var(--ko);font-size:1.1rem;color:var(--head)}
+.phc .yo{font-family:var(--ko);color:var(--muted);font-weight:400;font-size:.95rem}
+body.locked{overflow:hidden}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:12px;margin-top:14px}
+.tcard{display:grid;gap:2px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;min-width:0}
+.tcard:hover{border-color:var(--accent)}
+.tcard .tn{font-size:1.15rem;font-weight:700;color:var(--head)}
+.tcard .tko{font-family:var(--ko);color:var(--accent);font-size:.9rem}
+.tcard .tc{color:var(--muted);font-size:.85rem;margin-top:6px}
+.tcard .ts{color:var(--muted);font-size:.78rem}
+.themes{flex-wrap:wrap;align-items:center;overflow:visible}
+.crumb{font-size:1rem;color:var(--head)}
+.crumb .tko{font-family:var(--ko);color:var(--accent);font-size:.88rem}
+.crumbback{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px 4px 6px;color:var(--accent);font-weight:700;font-size:.86rem}
+.crumbback svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.subchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-basis:100%}
+.subchips::-webkit-scrollbar{display:none}
+.w.pr{align-items:center}
+.pw{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}
+.pw .hw{font-size:1.05rem}
+.pw .yo{font-family:var(--ko);color:var(--muted);font-size:.88rem}
+.pw .zh{flex-basis:100%;white-space:normal;color:var(--muted);font-size:.88rem}
+.from{flex:none;font-family:var(--ko);font-size:.78rem;padding:1px 8px;border-radius:999px;background:var(--warm-soft);color:var(--warm)}
+.phc.focus{background:var(--accent-soft);border-radius:10px;padding-inline:10px;margin-inline:-10px}
+.empty{text-align:center;color:var(--muted);padding:28px 0}
+.foot{margin-top:24px;font-size:.8rem;color:var(--muted)}
+/* Notebook additions: header tools, study controls, editors */
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top h1{margin-right:auto}
+.sync{font-size:.78rem;color:var(--muted);white-space:nowrap}
+.sync.warn{color:var(--warm)}
+.tbtn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:.86rem;color:var(--accent);font-weight:700;white-space:nowrap}
+.tbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tbtn[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.tbtn.danger{color:var(--warm)}
+.study{display:flex;gap:8px;align-items:center}
+.study .seg{flex:1}
+.homeacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.listacts{display:flex;justify-content:flex-end;margin-top:12px}
+.tcard.none{border-style:dashed}
+.known-b{flex:none;font-size:.72rem;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--surface);font-weight:700}
+.w.isknown .hw{opacity:.55}
+body.hidezh .w .zh,body.hidezh .mean li:not(.shown),body.hidezh .ex .z:not(.shown),body.hidezh .other li:not(.shown){filter:blur(6px);user-select:none}
+body.hidezh .mean li,body.hidezh .ex .z,body.hidezh .other li{cursor:pointer}
+.markk{margin-top:16px;width:100%;justify-content:center;padding:10px}
+.ed{position:fixed;inset:0;z-index:30;background:var(--bg);overflow-y:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+.ed-in{max-width:760px;margin:0 auto}
+.ehead{position:sticky;top:0;z-index:2;background:var(--bg);padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 6px -6px rgba(0,0,0,.12)}
+.ehead .ttl{flex:1;font-weight:700;color:var(--head);text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.save{border:0;background:var(--accent);color:var(--surface);border-radius:999px;padding:7px 18px;font-weight:700}
+.esec{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px 14px;margin-top:12px}
+.esec>summary{cursor:pointer;font-weight:700;color:var(--head);padding:8px 0;list-style:none;display:flex;gap:6px;align-items:baseline}
+.esec>summary::-webkit-details-marker{display:none}
+.esec>summary::before{content:"▸";color:var(--accent);font-size:.8em;transition:transform .15s}
+.esec[open]>summary::before{transform:rotate(90deg)}
+.esec>summary small{color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px 12px}
+.fi{display:grid;gap:2px;min-width:0}
+.fi.wide{grid-column:1/-1}
+.fi>span{font-size:.76rem;color:var(--muted)}
+.fi input,.fi textarea,.fi select,.sel{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;width:100%;min-width:0}
+.fi textarea{resize:vertical;line-height:1.45}
+.fi input:focus,.fi textarea:focus,.fi select:focus,.sel:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.fi .ko,.ko-in{font-family:var(--ko)}
+.card{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;display:grid;gap:8px;position:relative}
+.card.sub{background:var(--bg)}
+.card .ch{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);font-weight:700}
+.card .ch .x{margin-left:auto}
+.x{border:1px solid var(--line);background:var(--surface);color:var(--warm);border-radius:999px;width:28px;height:28px;padding:0;display:grid;place-items:center;flex:none}
+.x svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.add{border:1px dashed var(--accent);background:none;color:var(--accent);border-radius:10px;padding:6px 12px;font-size:.86rem;font-weight:700;margin-top:8px}
+.trow{display:flex;gap:6px;align-items:center}
+.trow .sel{flex:1}
+.hint{font-size:.78rem;color:var(--muted);margin:4px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipck{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.86rem;background:var(--bg)}
+.chipck input{margin:0}
+.subrow{display:flex;gap:6px;align-items:center}
+.subrow input{flex:1}
+.mv{border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:999px;width:28px;height:28px;padding:0;flex:none}
+.mv:disabled{opacity:.3}
+.delw{margin-top:20px;width:100%;justify-content:center;padding:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--head);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:.88rem;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.sacts{display:flex;gap:6px}
+.askbg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:16px}
+.askbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px;max-width:340px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.askbox p{margin:0 0 14px;color:var(--fg)}
+.askbtns{display:flex;justify-content:flex-end;gap:8px}
+.save.danger{background:var(--warm)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.gen{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--accent-soft);border-radius:14px;padding:10px 12px}
+.gen .hint{margin:0;flex:1;min-width:0}
+.gen .tbtn:disabled{opacity:.6}
+/* search highlighter, floating buttons, AI questions */
+:root{--mark:#ffe27a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--mark:#6b5a12}}
+:root[data-theme="dark"]{--mark:#6b5a12}
+mark.qm{background:linear-gradient(transparent 40%,var(--mark) 40%);color:inherit;padding:0 1px;border-radius:2px}
+.fabs{position:fixed;z-index:40;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;justify-items:center}
+.fab{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);display:grid;place-items:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.fab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fab.ai{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.aibox{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px 18px 16px;width:100%;max-width:480px;max-height:calc(100% - 20px);overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.aihead{display:flex;align-items:center;gap:8px}
+.aihead h2{margin:0;font-size:1.2rem;color:var(--head);flex:1}
+.aidesc{color:var(--muted);margin:6px 0 12px;font-size:.92rem}
+#aiform{display:grid;gap:8px}
+.aigo{border:0;border-radius:14px;background:var(--accent);color:var(--surface);font-weight:700;padding:11px}
+.aigo:disabled{opacity:.55}
+.aichips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.aichips button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:.88rem;color:var(--fg);text-align:left}
+.aians{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px;font-size:.95rem;line-height:1.7;overflow-wrap:anywhere}
+.aians p{margin:0 0 8px}.aians ul{margin:0 0 8px;padding-left:1.2em}
+.aians .q{color:var(--muted);font-size:.85rem;margin-bottom:6px}
+/* v4: compact scale, app header with section nav, tools beside search */
+body{font-size:14px;padding-block:12px 80px}
+h1{font-size:1.05rem;letter-spacing:.02em}
+.top{gap:6px}
+.sect{display:flex;gap:4px;margin:10px 0 2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.sect::-webkit-scrollbar{display:none}
+.sect button{flex:none;border:0;background:none;padding:6px 10px 8px;font-size:.9rem;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.sect button small{font-size:.68rem;margin-left:3px;opacity:.75}
+.sect button[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.sect button:disabled{cursor:default;opacity:.6}
+.bar{gap:6px;padding-block:8px}
+.srow2{display:flex;gap:6px;align-items:stretch}
+.srow2 .search{flex:1;min-width:0}
+.search{min-height:40px;border-radius:12px;padding:0 12px}
+.search input{padding:7px 0}
+.ibtn{flex:none;display:grid;place-items:center;gap:0;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;color:var(--accent);padding:2px 8px;min-width:46px;font-size:.66rem;font-weight:700;line-height:1.1}
+.ibtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#menubtn svg{fill:currentColor;stroke:none}
+.ibtn[aria-pressed="true"],.ibtn[aria-expanded="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.menuwrap{position:relative;display:flex}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:8;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.16);display:grid}
+.menu button{display:flex;align-items:center;gap:8px;border:0;background:none;padding:9px 10px;border-radius:9px;text-align:left;color:var(--fg);font-size:.92rem;white-space:nowrap}
+.menu button:hover,.menu button:focus-visible{background:var(--accent-soft)}
+.menu svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.seg button{padding:5px 4px;font-size:.84rem}
+.tchip{padding:3px 11px;font-size:.82rem}
+.tgrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:10px;margin-top:10px}
+.tcard{padding:12px 14px;border-radius:14px}
+.tcard .tn{font-size:1rem}
+.tcard .tko{font-size:.84rem}
+.tcard .tc{margin-top:4px;font-size:.8rem}
+.tcard .ts{font-size:.74rem}
+.list{gap:6px}
+.w{padding:8px 10px 8px 14px;border-radius:12px;gap:8px}
+.w .hw{font-size:1.08rem}
+.pw .hw{font-size:1rem}
+.say{width:28px;height:28px}
+.w .say{width:26px;height:26px}
+.shead{gap:8px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+.back,.tbtn{padding:4px 12px 4px 8px;font-size:.84rem}
+.nav button{width:34px;height:34px}
+.tabs button{padding:6px 4px;font-size:.86rem}
+.sbody{padding:2px 14px 14px;border-radius:14px}
+.dhead .big{font-size:1.7rem}
+.phc .pt b{font-size:1.05rem}
+.ex .k{font-size:.98rem}
+.markk{padding:8px;margin-top:12px}
+.foot{font-size:.76rem}
+.fab{width:44px;height:44px}
+/* 近義／反義: two labeled blocks, one row per word with a divider */
+.rels{padding-top:12px;display:grid;gap:16px}
+.rh{display:flex;align-items:center;gap:6px;margin:0 0 4px;letter-spacing:0;font-size:.8rem}
+.rh span{padding:2px 10px;border-radius:999px;font-weight:700}
+.rsec.syn .rh span{background:var(--accent-soft);color:var(--accent)}
+.rsec.ant .rh span{background:var(--warm-soft);color:var(--warm)}
+.rh small{color:var(--muted);font-weight:400}
+.rlist{list-style:none;margin:0;padding:0}
+.rlist li{padding:9px 0;border-bottom:1px dashed var(--line)}
+.rlist li:last-child{border-bottom:0}
+.rrow{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap}
+.rw{font-family:var(--ko);font-size:1.15rem;color:var(--head)}
+.rz{flex:1;min-width:0;color:var(--fg)}
+.rrow .say{margin-left:auto}
+.rn{color:var(--muted);font-size:.84rem;margin-top:3px;line-height:1.5}
+/* 變化: label above on phones so nothing wraps awkwardly; speaker on the right */
+.forms div{align-items:center;padding:6px 0}
+.forms small{width:9em}
+.forms .fv{flex:1;min-width:0}
+.forms .say{width:26px;height:26px}
+@media (max-width:420px){.forms div{display:grid;grid-template-columns:1fr auto;gap:0 8px}.forms small{width:auto;grid-column:1}.forms .fv{grid-column:1}.forms .say{grid-column:2;grid-row:1/3}}
+/* keep the sticky bar inside the screen on narrow phones / larger text */
+.bar{grid-template-columns:minmax(0,1fr)}
+.bar>*,.themes>*,.subchips{min-width:0}
+.seg button{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.wrap{overflow-x:clip}
+.sect button{flex:1 1 0;min-width:0;text-align:center}
+.golink{font:inherit;font-size:.76rem;cursor:pointer;background:var(--surface);color:var(--accent);border-color:var(--accent);margin:2px 0}
+.other .golink{display:inline-block}
+.retbtn{display:inline-flex;align-items:center;gap:4px;border:0;background:var(--accent);color:var(--surface);border-radius:999px;padding:4px 12px 4px 8px;font-weight:700;font-size:.84rem;flex-basis:auto}
+.retbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rlist details.fm.sm{margin-top:4px}
+</style>
+<div class="wrap">
+  <header class="top"><h1>韓文學習</h1><span class="sync" id="sync">讀取中…</span></header>
+  <nav class="sect" aria-label="功能"><button type="button" aria-current="page">單字</button><button type="button" disabled title="準備中">文法</button><button type="button" disabled title="準備中">複習</button><button type="button" disabled title="準備中">日記</button></nav>
+  <div class="bar">
+    <div class="srow2"><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="q" type="search" placeholder="搜尋單字或片語（韓文、中文）" autocomplete="off"></label>
+      <button class="ibtn" type="button" id="hidebtn" aria-pressed="false" aria-label="隱藏中文" title="隱藏中文"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>中文</span></button>
+      <div class="menuwrap"><button class="ibtn" type="button" id="menubtn" aria-haspopup="menu" aria-expanded="false" aria-label="管理"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>管理</span></button>
+        <div class="menu" id="menu" role="menu" hidden><button type="button" role="menuitem" data-newword="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>新增單字</button><button type="button" role="menuitem" data-themes="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>編輯主題和小分類</button><button type="button" role="menuitem" data-perm="1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="permlab">設定編輯權限</span></button></div></div></div>
+    <div class="themes" id="themes" role="group" aria-label="主題"></div>
+    <div class="seg" id="view" role="group" aria-label="顯示" hidden></div>
+    <div class="seg" id="pos" role="group" aria-label="詞性"></div>
+    <div class="seg" id="kf" role="group" aria-label="學習進度" hidden></div>
+  </div>
+  <div id="out"></div>
+  <p class="foot" id="foot">新增或改過的句子還沒有預先做好的語音前，會先用瀏覽器內建語音。</p>
+</div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="單字內容">
+  <div class="sheet-in">
+    <div class="shead">
+      <div class="srow"><button class="back" type="button" id="back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>返回</button>
+        <button class="tbtn" type="button" id="editw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>編輯</button>
+        <div class="nav"><button type="button" id="prev" aria-label="上一個字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" id="next" aria-label="下一個字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+    </div>
+    <div class="sbody" id="sbody"></div>
+    <button class="tbtn markk" type="button" id="markk"></button>
+  </div>
+</div>
+<div class="ed" id="ed" hidden role="dialog" aria-modal="true">
+  <div class="ed-in">
+    <div class="ehead"><button class="back" type="button" id="edcancel">取消</button><span class="ttl" id="edttl"></span><button class="save" type="button" id="edsave">儲存</button></div>
+    <div id="edbody"></div>
+  </div>
+</div>
+<div class="askbg" id="ask" hidden role="alertdialog" aria-modal="true"><div class="askbox"><p></p><div class="askbtns"><button class="tbtn" type="button" data-no="1">取消</button><button class="save danger" type="button" data-ok="1">確定</button></div></div></div>
+<div class="fabs" id="fabs"><button class="fab" type="button" id="totop" aria-label="回到上方" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button class="fab ai" type="button" id="aibtn" aria-label="AI 問答" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
+<div class="askbg" id="ai" hidden role="dialog" aria-modal="true" aria-labelledby="aittl"><div class="aibox">
+  <div class="aihead"><h2 id="aittl">AI 問答</h2><button class="x" type="button" id="aiclose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <p class="aidesc">韓文的任何問題都可以問：單字差在哪、文法怎麼用、某句話怎麼說。</p>
+  <form id="aiform"><input id="aiq" class="sel" autocomplete="off" placeholder="想問什麼韓文問題？"><button class="aigo" type="submit" id="aigo">問問看</button></form>
+  <div class="aichips" id="aichips"></div>
+  <div class="aians" id="aians" hidden></div>
+</div></div>
+<div class="askbg" id="perm" hidden role="dialog" aria-modal="true" aria-labelledby="permttl"><div class="aibox">
+  <div class="aihead"><h2 id="permttl">編輯權限</h2><button class="x" type="button" id="permclose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <p class="aidesc" id="permdesc"></p>
+  <form id="permform"><input id="permtok" class="sel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"><button class="aigo" type="submit">儲存</button></form>
+  <p class="aidesc" id="permmsg" aria-live="polite"></p>
+</div></div>
+<style>
+.lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
+.lockbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 20px;width:min(340px,100%);display:grid;gap:10px}
+.lockbox h1{text-align:center}.lockbox p{margin:0;color:var(--muted);font-size:.9rem;text-align:center}
+.lockbox input{width:100%;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.lockbox button{border:0;background:var(--accent);color:var(--surface);border-radius:999px;padding:9px;font-weight:700}
+.lockbox .lockmsg{color:var(--warm);min-height:1.4em}
+</style>
+<div class="lock" id="lock"><form class="lockbox" id="lockform"><h1>韓文學習</h1><p id="locktip">讀取中…</p>
+  <input id="lockpw" type="password" autocomplete="current-password" placeholder="密碼" hidden><button type="submit" id="lockgo" hidden>打開</button><p class="lockmsg" id="lockmsg" aria-live="polite"></p></form></div>
 <script>
-const a=new Audio(),st=document.getElementById("st");
-document.querySelectorAll("button").forEach(b=>b.onclick=()=>{a.src=b.dataset.src;a.play().then(()=>st.textContent="✓ 有播放").catch(e=>st.textContent="✗ "+e.name)});
-</script></body></html>
+/* Everything on this site is encrypted (AES-GCM, key from the password with PBKDF2): data.enc = words + themes + audio map,
+   a/<name> = one mp3 each, cfg.enc = the GitHub token for saving, edits.enc on the "edits" branch = changes made on the site.
+   Each file is 12-byte IV + ciphertext. The key is kept in localStorage, so the password is asked once per device. */
+(async()=>{
+const REPO="krstudy/korean-audio",API="https://api.github.com/repos/"+REPO;
+const te=new TextEncoder(),td=new TextDecoder();
+const $=id=>document.getElementById(id);
+const b64e=u8=>{let s="";for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)};
+const b64d=b=>{const s=atob(b.replace(/\s/g,"")),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+let key=null;
+const dec=async u8=>new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:u8.subarray(0,12)},key,u8.subarray(12)));
+const enc=async u8=>{const iv=crypto.getRandomValues(new Uint8Array(12));const c=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,u8));const o=new Uint8Array(12+c.length);o.set(iv);o.set(c,12);return o};
+const get=async(p,o)=>{const r=await fetch(p,o);if(!r.ok)return null;return new Uint8Array(await r.arrayBuffer())};
+let meta,dataRaw;
+try{[meta,dataRaw]=await Promise.all([fetch("meta.json",{cache:"no-cache"}).then(r=>r.json()),get("data.enc",{cache:"no-cache"})]);if(!dataRaw)throw 0}
+catch(e){$("locktip").textContent="讀不到網站資料，請檢查網路後重新整理。";return}
+async function tryKey(raw){try{key=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["encrypt","decrypt"]);return JSON.parse(td.decode(await dec(dataRaw)))}catch(e){key=null;return null}}
+let D=null;const saved=ls("kr-key");if(saved)D=await tryKey(b64d(saved));
+if(!D){ls("kr-key",null);$("locktip").textContent="請輸入密碼（每台裝置只要輸入一次）";$("lockpw").hidden=$("lockgo").hidden=false;$("lockpw").focus();
+  await new Promise(res=>{$("lockform").onsubmit=async e=>{e.preventDefault();const pw=$("lockpw").value;if(!pw)return;$("lockmsg").textContent="解鎖中…";
+    const base=await crypto.subtle.importKey("raw",te.encode(pw),"PBKDF2",false,["deriveBits"]);
+    const bits=new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:b64d(meta.salt),iterations:meta.iter},base,256));
+    D=await tryKey(bits);if(!D){$("lockmsg").textContent="密碼不對，再試一次";return}ls("kr-key",b64e(bits));res()}})}
+let token=null;
+try{const c=await get("cfg.enc",{cache:"no-cache"});if(c){token=JSON.parse(td.decode(await dec(c))).token||null;if(token)ls("kr-tok",token)}}catch(e){}
+if(!token)token=ls("kr-tok");
+const hdr=()=>{const h={Accept:"application/vnd.github+json"};if(S.token)h.Authorization="Bearer "+S.token;return h};
+const encB64=async o=>b64e(await enc(te.encode(JSON.stringify(o))));
+async function put(path,branch,obj,sha,tok){const r=await fetch(API+"/contents/"+path,{method:"PUT",headers:{...hdr(),...(tok?{Authorization:"Bearer "+tok}:{})},
+    body:JSON.stringify({message:"update "+path,branch,content:await encB64(obj),...(sha?{sha}:{})})});
+  if(r.status===409||r.status===422){const e=new Error("和其他裝置同時儲存");e.conflict=true;throw e}
+  if(r.status===401)throw new Error("權杖不能用或已經過期，請到「管理 → 編輯權限」換一個新的");
+  if(r.status===403||r.status===404)throw new Error("權杖沒有寫入權限（Contents 要選 Read and write）");
+  if(!r.ok)throw new Error("GitHub 回應 "+r.status);return r.json()}
+const S=window.__S={token,
+  file:async p=>{const u=await get(p);return u?dec(u):null},
+  async pull(){const r=await fetch(API+"/contents/edits.enc?ref=edits",{headers:hdr(),cache:"no-store"});
+    if(r.status===404)return{map:{},sha:null};if(!r.ok)throw new Error("讀取失敗 "+r.status);
+    const j=await r.json();let b=j.content;
+    if(!b||j.encoding==="none"){const r2=await fetch(API+"/git/blobs/"+j.sha,{headers:hdr(),cache:"no-store"});b=(await r2.json()).content} /* over 1 MB */
+    return{map:JSON.parse(td.decode(await dec(b64d(b)))),sha:j.sha}},
+  async push(m,sha){return put("edits.enc","edits",m,sha)},
+  async setToken(t){const r=await fetch(API+"/contents/cfg.enc?ref=main",{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+t},cache:"no-store"});
+    if(r.status===401)throw new Error("這個權杖不能用，請確認有完整複製");
+    if(!r.ok&&r.status!==404)throw new Error("這個權杖看不到 korean-audio（Repository access 要選 korean-audio）");
+    const sha=r.ok?(await r.json()).sha:null;
+    await put("cfg.enc","main",{token:t},sha,t);S.token=t;ls("kr-tok",t)}};
+window.__D=D;
+const sc=document.createElement("script");sc.src="app.js?v="+meta.v;sc.onload=()=>{$("lock").hidden=true};document.body.appendChild(sc);
+})();
+</script>
+
+</body></html>
