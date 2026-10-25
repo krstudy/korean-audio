@@ -187,6 +187,21 @@ body.locked{overflow:hidden}
 .study{display:flex;gap:8px;align-items:center}
 .study .seg{flex:1}
 .homeacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.orgbtn{margin-left:auto}
+.orgbtn[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.orghint{margin:0 0 2px;color:var(--muted);font-size:.82rem}
+.w .ck{flex:none;width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:grid;place-items:center;background:var(--bg)}
+.w .ck svg{width:14px;height:14px;stroke:var(--surface);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.w .ck.on{background:var(--accent);border-color:var(--accent)}.w .ck.on svg{opacity:1}
+.w.picked{border-color:var(--accent);background:var(--accent-soft)}
+.w .grip{flex:none;display:grid;place-items:center;width:34px;height:34px;margin:-6px -6px -6px 0;touch-action:none;cursor:grab;color:var(--muted)}
+.w .grip svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.w.dragging{box-shadow:0 8px 20px rgba(0,0,0,.18);border-color:var(--accent);position:relative;z-index:2;opacity:.95}
+.orgbar{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 16px rgba(0,0,0,.08);display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.orgbar #orgn{font-size:.86rem;color:var(--head);font-weight:700;flex-basis:100%}
+.orgbar select{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.orgbar .save:disabled{opacity:.45}
+body.orgon{padding-bottom:140px}body.orgon .toast{bottom:calc(120px + env(safe-area-inset-bottom,0px))}body.orgon .fabs{display:none}
 .listacts{display:flex;justify-content:flex-end;margin-top:12px}
 .tcard.none{border-style:dashed}
 .known-b{flex:none;font-size:.72rem;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--surface);font-weight:700}
@@ -381,6 +396,7 @@ h1{font-size:1.05rem;letter-spacing:.02em}
   </div>
 </div>
 <div class="askbg" id="ask" hidden role="alertdialog" aria-modal="true"><div class="askbox"><p></p><div class="askbtns"><button class="tbtn" type="button" data-no="1">取消</button><button class="save danger" type="button" data-ok="1">確定</button></div></div></div>
+<div class="orgbar" id="orgbar" hidden><span id="orgn"></span><select id="orgto" class="sel" aria-label="搬到哪裡"></select><button class="save" type="button" id="orggo">搬過去</button><button class="tbtn" type="button" id="orgdone">完成</button></div>
 <div class="fabs" id="fabs"><button class="fab" type="button" id="totop" aria-label="回到上方" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button class="fab ai" type="button" id="aibtn" aria-label="AI 問答" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button></div>
 <div class="askbg" id="ai" hidden role="dialog" aria-modal="true" aria-labelledby="aittl"><div class="aibox">
   <div class="aihead"><h2 id="aittl">AI 問答</h2><button class="x" type="button" id="aiclose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -407,7 +423,8 @@ h1{font-size:1.05rem;letter-spacing:.02em}
   <input id="lockpw" type="password" autocomplete="current-password" placeholder="密碼" hidden><button type="submit" id="lockgo" hidden>打開</button><p class="lockmsg" id="lockmsg" aria-live="polite"></p></form></div>
 <script>
 /* Everything on this site is encrypted (AES-GCM, key from the password with PBKDF2): data.enc = words + themes + audio map,
-   a/<name> = one mp3 each, cfg.enc = the GitHub token for saving, edits.enc on the "edits" branch = changes made on the site.
+   a/<name> = one mp3 each, edits.enc on the "edits" branch = changes made on the site.
+   The GitHub token for saving stays only on the devices where it was pasted (localStorage "kr-tok"), so the password alone gives read-only access.
    Each file is 12-byte IV + ciphertext. The key is kept in localStorage, so the password is asked once per device. */
 (async()=>{
 const REPO="krstudy/korean-audio",API="https://api.github.com/repos/"+REPO;
@@ -430,9 +447,7 @@ if(!D){ls("kr-key",null);$("locktip").textContent="請輸入密碼（每台裝�
     const base=await crypto.subtle.importKey("raw",te.encode(pw),"PBKDF2",false,["deriveBits"]);
     const bits=new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:b64d(meta.salt),iterations:meta.iter},base,256));
     D=await tryKey(bits);if(!D){$("lockmsg").textContent="密碼不對，再試一次";return}ls("kr-key",b64e(bits));res()}})}
-let token=null;
-try{const c=await get("cfg.enc",{cache:"no-cache"});if(c){token=JSON.parse(td.decode(await dec(c))).token||null;if(token)ls("kr-tok",token)}}catch(e){}
-if(!token)token=ls("kr-tok");
+const token=ls("kr-tok");
 const hdr=()=>{const h={Accept:"application/vnd.github+json"};if(S.token)h.Authorization="Bearer "+S.token;return h};
 const encB64=async o=>b64e(await enc(te.encode(JSON.stringify(o))));
 async function put(path,branch,obj,sha,tok){const r=await fetch(API+"/contents/"+path,{method:"PUT",headers:{...hdr(),...(tok?{Authorization:"Bearer "+tok}:{})},
@@ -449,11 +464,10 @@ const S=window.__S={token,
     if(!b||j.encoding==="none"){const r2=await fetch(API+"/git/blobs/"+j.sha,{headers:hdr(),cache:"no-store"});b=(await r2.json()).content} /* over 1 MB */
     return{map:JSON.parse(td.decode(await dec(b64d(b)))),sha:j.sha}},
   async push(m,sha){return put("edits.enc","edits",m,sha)},
-  async setToken(t){const r=await fetch(API+"/contents/cfg.enc?ref=main",{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+t},cache:"no-store"});
+  async setToken(t){const r=await fetch(API,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+t},cache:"no-store"});
     if(r.status===401)throw new Error("這個權杖不能用，請確認有完整複製");
-    if(!r.ok&&r.status!==404)throw new Error("這個權杖看不到 korean-audio（Repository access 要選 korean-audio）");
-    const sha=r.ok?(await r.json()).sha:null;
-    await put("cfg.enc","main",{token:t},sha,t);S.token=t;ls("kr-tok",t)}};
+    if(!r.ok)throw new Error("這個權杖看不到 korean-audio（Repository access 要選 korean-audio）");
+    S.token=t;ls("kr-tok",t)}};
 window.__D=D;
 const sc=document.createElement("script");sc.src="app.js?v="+meta.v;sc.onload=()=>{$("lock").hidden=true};document.body.appendChild(sc);
 })();

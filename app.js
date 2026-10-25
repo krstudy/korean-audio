@@ -9,9 +9,9 @@ const AUD={};
 //   meta/known   {ids: {<id>: 1}}
 // A localStorage copy gives instant paint and a fallback when db is unavailable.
 const LS="kr-notebook-v1";
-let OV={}, THEMES_OV=null, KNOWN={}, pend={}, dbState="loading";
-try{const c=JSON.parse(localStorage.getItem(LS)||"null");if(c){OV=c.ov||{};THEMES_OV=c.themes||null;KNOWN=c.known||{};pend=c.pend||{}}}catch(e){}
-function cacheLocal(){try{localStorage.setItem(LS,JSON.stringify({ov:OV,themes:THEMES_OV,known:KNOWN,pend}))}catch(e){}}
+let OV={}, THEMES_OV=null, KNOWN={}, ORDER={}, pend={}, dbState="loading";
+try{const c=JSON.parse(localStorage.getItem(LS)||"null");if(c){OV=c.ov||{};THEMES_OV=c.themes||null;KNOWN=c.known||{};ORDER=c.order||{};pend=c.pend||{}}}catch(e){}
+function cacheLocal(){try{localStorage.setItem(LS,JSON.stringify({ov:OV,themes:THEMES_OV,known:KNOWN,order:ORDER,pend}))}catch(e){}}
 
 const clone=o=>JSON.parse(JSON.stringify(o));
 const arr=a=>Array.isArray(a)?a:[];
@@ -27,10 +27,13 @@ function normalize(w){
   return w;
 }
 let WORDS=[],THEMES=[],TNAMES=new Set();
+/* custom order (meta/order {words:[ids], phrases:["<word id>:<phrase id>"]}); anything not listed keeps its place after the listed ones */
+function rankOf(list){const m=new Map((list||[]).map((k,i)=>[k,i]));return (k,i)=>m.has(k)?m.get(k):1e6+i}
 function rebuild(){
   const map=new Map(BASE_WORDS.map(w=>[w.id,w]));
   for(const [id,o] of Object.entries(OV)){if(!o)continue;if(o.deleted)map.delete(id);else if(o.data)map.set(id,o.data)}
   WORDS=[...map.values()].map(w=>normalize(clone(w)));
+  const wi=rankOf(ORDER.words);WORDS=WORDS.map((w,i)=>[w,i]).sort((a,b)=>wi(a[0].id,a[1])-wi(b[0].id,b[1])).map(x=>x[0]);
   const ths=THEMES_OV||BASE_THEMES;TNAMES=new Set(ths.map(t=>t.name));
   THEMES=ths.map(t=>({...t,subs:arr(t.subs),key:t.name,words:WORDS.filter(w=>w.meanings.some(m=>m.topics.some(x=>x.theme===t.name)))}));
   const orphan=WORDS.filter(w=>!w.meanings.some(m=>m.topics.some(x=>TNAMES.has(x.theme))));
@@ -104,19 +107,23 @@ function parts(w,tk){
     {k:"form",n:w.pos.includes("名詞")&&!f.stem?"助詞":"變化",c:f.forms.length,html:`${f.irregular?`<p class="note" style="margin-top:14px">${esc(f.irregular)}</p>`:""}${f.forms.length?`<div class="forms" style="margin-top:10px">${f.forms.map(x=>`<div><small>${esc(x.label)}</small><span class="fv"><b${sa(spoken(x.form),x.audio)}>${esc(x.form)}</b>${x.pron?` <i>${esc(x.pron)}</i>`:""}</span>${say(spoken(x.form),x.audio)}</div>`).join("")}</div>`:`<p class="note" style="padding-top:12px">還沒有型態變化</p>`}`}
   ];
 }
-let st={theme:null,sub:null,pos:null,q:"",cur:null,tab:"mean",visible:[],view:"word",kf:null};
+let st={theme:null,sub:null,pos:null,q:"",cur:null,tab:"mean",visible:[],view:"word",kf:null,org:false,sel:new Set()};
 try{const h=JSON.parse(localStorage.getItem(LS+"-ui")||"{}");if(h.hide)document.body.classList.add("hidezh")}catch(e){}
 const isK=w=>false; /* 會了／還不會 removed (2026-10-25); KNOWN is still loaded and kept */
 const kOK=w=>!st.kf||(st.kf==="k"?isK(w):!isK(w));
 function match(w){const q=st.q.trim().toLowerCase();
   return (!st.pos||w.pos.includes(st.pos))&&kOK(w)&&(!q||w.word.includes(q)||w.id.includes(q)||w.meanings.some(m=>m.zh.includes(q)));}
+const ORG=()=>st.org&&!st.q.trim();
+const ck=k=>ORG()&&st.view==="word"?`<span class="ck${st.sel.has(k)?" on":""}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span>`:"";
+const grip=()=>ORG()?`<span class="grip" data-grip="1" aria-label="按住拖拉排順序"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg></span>`:"";
 function rowHTML(tk,w){st.visible.push([tk,w.id]);const z=w.meanings.filter(m=>inT(m,tk)).map(m=>m.zh).join("；")||w.meanings.map(m=>m.zh).join("；");
-  return `<div class="w${isK(w)?" isknown":""}" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}"><span class="hw">${esc(w.word)}</span>${w.pronunciation?`<span class="rp">${esc(w.pronunciation)}</span>`:""}${say(w.word,w.audio)}<span class="zh">${esc(z)}</span>${isK(w)?`<span class="known-b">會了</span>`:""}<span class="pos">${esc(w.pos.join("・"))}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>`}
+  return `<div class="w${isK(w)?" isknown":""}${ORG()?" org":""}${ORG()&&st.sel.has(w.id)?" picked":""}" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}" data-k="${esc(w.id)}">${ck(w.id)}<span class="hw">${esc(w.word)}</span>${w.pronunciation?`<span class="rp">${esc(w.pronunciation)}</span>`:""}${say(w.word,w.audio)}<span class="zh">${esc(z)}</span>${isK(w)?`<span class="known-b">會了</span>`:""}<span class="pos">${esc(w.pos.join("・"))}</span>${ORG()?grip():`<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`}</div>`}
 function themePhrases(w,tk){const ids=new Set(w.meanings.filter(m=>inT(m,tk)).flatMap(m=>m.phrase_ids));const linked=new Set(w.meanings.flatMap(m=>m.phrase_ids));
   return w.phrases.filter(p=>ids.has(p.id)||!linked.has(p.id));}
+function sortPh(a,off){const r=rankOf(ORDER.phrases),k=x=>x[off?1:0].id+":"+x[off?2:1].id;return a.map((x,i)=>[x,r(k(x),i)]).sort((x,y)=>x[1]-y[1]).map(x=>x[0])}
 const pmatch=(p,q)=>p.phrase.includes(q)||(p.zh||"").includes(q)||(p.yo||"").includes(q);
 function phRow(tk,w,p){if(!st.visible.some(v=>v[0]===tk&&v[1]===w.id))st.visible.push([tk,w.id]);
-  return `<div class="w pr" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}" data-ph="${esc(p.id)}"><span class="pw"><span class="hw">${esc(p.phrase)}</span>${p.yo?`<span class="yo">（${esc(p.yo)}）</span>`:""}${say(p.phrase,p.audio)}<span class="zh">${esc(p.zh)}</span></span><span class="from">${esc(w.word)}</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>`}
+  return `<div class="w pr${ORG()?" org":""}" role="button" tabindex="0" data-id="${esc(w.id)}" data-t="${esc(tk)}" data-ph="${esc(p.id)}" data-k="${esc(w.id+":"+p.id)}"><span class="pw"><span class="hw">${esc(p.phrase)}</span>${p.yo?`<span class="yo">（${esc(p.yo)}）</span>`:""}${say(p.phrase,p.audio)}<span class="zh">${esc(p.zh)}</span></span><span class="from">${esc(w.word)}</span>${ORG()?grip():`<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`}</div>`}
 function viewTabs(nw,np){const V=document.getElementById("view");V.hidden=false;
   V.innerHTML=[["word","單字",nw],["phrase","片語",np]].map(([k,n,c])=>`<button type="button" data-v="${k}" aria-pressed="${st.view===k}">${n}<small>${c}</small></button>`).join("")}
 function posTabs(pool){const P=document.getElementById("pos");P.hidden=false;const extra=[...new Set(WORDS.flatMap(w=>w.pos))].filter(p=>!POS0.includes(p));
@@ -133,13 +140,13 @@ function draw(){
     const pool=hits.filter(h=>loose(h[1])).map(h=>h[1]);posTabs(pool);
     const ws=hits.filter(h=>match(h[1]));
     const ql=q.toLowerCase(), ps=[];hits.forEach(([tk,w])=>{if((!st.pos||w.pos.includes(st.pos))&&kOK(w))w.phrases.forEach(p=>{if(pmatch(p,ql))ps.push([tk,w,p])})});
-    viewTabs(ws.length,ps.length);
+    const psS=sortPh(ps,1);ps.length=0;ps.push(...psS);viewTabs(ws.length,ps.length);
     const list=st.view==="phrase"?ps.map(([tk,w,p])=>phRow(tk,w,p)):ws.map(([tk,w])=>rowHTML(tk,w));
     out.innerHTML=list.length?`<div class="list" style="margin-top:14px">${list.join("")}</div>`:`<div class="empty">沒有符合的${st.view==="phrase"?"片語":"單字"}</div>`;markQ(out);return;
   }
   const th=THEMES.find(x=>x.key===st.theme&&(x.words.length||!x.virtual));
   if(!th){
-    st.theme=null;T.innerHTML="";["pos","view","kf"].forEach(i=>document.getElementById(i).hidden=true);
+    st.theme=null;st.org=false;orgBar();T.innerHTML="";["pos","view","kf"].forEach(i=>document.getElementById(i).hidden=true);
     const cards=THEMES.filter(t=>!t.virtual||t.words.length);
     out.innerHTML=`<div class="tgrid">${cards.map(t=>`<button class="tcard${t.virtual?" none":""}" type="button" data-open="${esc(t.key)}"><span class="tn">${esc(t.name)}</span>${t.ko?`<span class="tko">${esc(t.ko)}</span>`:""}<span class="tc">${t.words.length} 個字</span>${t.subs.length?`<span class="ts">${t.subs.map(esc).join("・")}</span>`:""}</button>`).join("")}</div>
 `;return;
@@ -149,15 +156,16 @@ function draw(){
   const opts=subs.length?[null,...subs,...(unc?["未分類"]:[])]:[];
   if(st.sub&&!opts.includes(st.sub))st.sub=null;
   const inSub=w=>!st.sub||(st.sub==="未分類"?!subs.includes(subOf(w,th.key)):subOf(w,th.key)===st.sub);
-  T.innerHTML=(RET?`<button class="retbtn" type="button" data-ret="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-5-5 5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>回到「${esc(RET.word)}」</button>`:"")+`<button class="crumbback" type="button" data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>主題</button><span class="crumb"><b>${esc(th.name)}</b> <span class="tko">${esc(th.ko)}</span></span>`+
+  T.innerHTML=(RET?`<button class="retbtn" type="button" data-ret="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-5-5 5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>回到「${esc(RET.word)}」</button>`:"")+`<button class="crumbback" type="button" data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>主題</button><span class="crumb"><b>${esc(th.name)}</b> <span class="tko">${esc(th.ko)}</span></span><button class="tbtn orgbtn" type="button" data-org="1" aria-pressed="${!!st.org}">${st.org?"完成":"整理"}</button>`+
     (opts.length?`<div class="subchips">${opts.map(s=>`<button class="tchip" type="button" data-sub="${esc(s??"")}" aria-pressed="${st.sub===s}">${esc(s??"全部")}<small>${th.words.filter(w=>s===null||(s==="未分類"?!subs.includes(subOf(w,th.key)):subOf(w,th.key)===s)).length}</small></button>`).join("")}</div>`:"");
   const pool=th.words.filter(w=>inSub(w)&&loose(w));posTabs(pool);
   const ws=th.words.filter(w=>inSub(w)&&match(w));
-  const ps=ws.flatMap(w=>themePhrases(w,th.key).map(p=>[w,p]));
+  const ps=sortPh(ws.flatMap(w=>themePhrases(w,th.key).map(p=>[w,p])));
   viewTabs(ws.length,ps.length);
   const list=st.view==="phrase"?ps.map(([w,p])=>phRow(th.key,w,p)):ws.map(w=>rowHTML(th.key,w));
   queueMicrotask(()=>markQ(out));
-  out.innerHTML=(list.length?`<div class="list" style="margin-top:14px">${list.join("")}</div>`:`<div class="empty">沒有符合的${st.view==="phrase"?"片語":"單字"}</div>`);
+  out.innerHTML=(list.length?`<div class="list" style="margin-top:14px">${ORG()?`<p class="orghint">${st.view==="word"?"點字勾選，可以一次搬到別的主題或小分類。":""}按住右邊的 ≡ 上下拖，可以調整順序。</p>`:""}${list.join("")}</div>`:`<div class="empty">沒有符合的${st.view==="phrase"?"片語":"單字"}</div>`);
+  orgBar();
 }
 const sheet=document.getElementById("sheet");
 function openWord(tk,id,ph){st.cur=[tk,id];st.tab=ph?"ph":"mean";renderSheet();sheet.hidden=false;document.body.classList.add("locked");sheet.scrollTop=0;
@@ -191,6 +199,7 @@ document.getElementById("sbody").addEventListener("click",e=>{if(!document.body.
 document.getElementById("hidebtn").onclick=e=>{const on=document.body.classList.toggle("hidezh");e.currentTarget.setAttribute("aria-pressed",on);try{localStorage.setItem(LS+"-ui",JSON.stringify({hide:on}))}catch(x){}};
 document.getElementById("hidebtn").setAttribute("aria-pressed",document.body.classList.contains("hidezh"));
 document.getElementById("themes").onclick=e=>{if(e.target.closest("[data-ret]")){goBack();return}
+  if(e.target.closest("[data-org]")){st.org=!st.org;st.sel.clear();draw();return}
   const h=e.target.closest("[data-home]");if(h){RET=null;st.theme=null;st.sub=null;st.pos=null;st.kf=null;draw();return}
   const b=e.target.closest("[data-sub]");if(b){st.sub=b.dataset.sub||null;draw()}};
 document.getElementById("pos").onclick=e=>{const b=e.target.closest("[data-p]");if(!b)return;st.pos=b.dataset.p||null;draw()};
@@ -225,10 +234,10 @@ async function flush(){if(saving||!S.token||!Object.keys(pend).length)return;sav
       for(const k in batch)if(pend[k]===batch[k])delete pend[k];fails=0;dbState="on";applyRemote(m);break}
     catch(e){if(e&&e.conflict&&tries<3){await new Promise(r=>setTimeout(r,500+Math.random()*800));continue}fails++;toast("儲存失敗："+((e&&e.message)||e));break}}
   saving=false;showSync();refreshSafe();if(Object.keys(pend).length&&!fails)flush()}
-function applyRemote(m){let o={},th=null,kn={};
+function applyRemote(m){let o={},th=null,kn={},od={};
   for(const [k,v] of [...Object.entries(m||{}),...Object.entries(pend)]){ /* unsaved local changes win */
-    if(k.startsWith("words/"))o[k.slice(6)]=v;else if(k==="meta/themes")th=v.themes;else if(k==="meta/known")kn={...(v.ids||{})}}
-  OV=o;THEMES_OV=th;KNOWN=kn;cacheLocal()}
+    if(k.startsWith("words/"))o[k.slice(6)]=v;else if(k==="meta/themes")th=v.themes;else if(k==="meta/known")kn={...(v.ids||{})};else if(k==="meta/order")od={words:v.words,phrases:v.phrases}}
+  OV=o;THEMES_OV=th;KNOWN=kn;ORDER=od;cacheLocal()}
 function saveWord(w){OV[w.id]={data:w};write("words/"+w.id,{data:w,t:Date.now()})}
 function deleteWord(id){OV[id]={deleted:true};write("words/"+id,{deleted:true,t:Date.now()})}
 function saveThemes(list){THEMES_OV=list;write("meta/themes",{themes:list,t:Date.now()})}
@@ -451,11 +460,11 @@ async function pullNow(){if(saving)return;
 pullNow();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pullNow()});
 
-/* ---------- edit permission: a GitHub token, kept encrypted in cfg.enc so every device gets it with the password ---------- */
+/* ---------- edit permission: a GitHub token kept only on this device ---------- */
 const perm=document.getElementById("perm");
 function permLabel(){document.getElementById("permlab").textContent=S.token?"編輯權限（已設定）":"設定編輯權限"}
 permLabel();
-function openPerm(){document.getElementById("permdesc").textContent=S.token?"已經設定好了，修改會同步到每台裝置。權杖過期的話，把新的貼在這裡取代。":"把 GitHub 權杖貼在這裡。只要在一台裝置設定一次，其他裝置輸入密碼後就會自動有權限。";
+function openPerm(){document.getElementById("permdesc").textContent=S.token?"這台裝置已經可以編輯，修改會同步到每台裝置。權杖過期的話，把新的貼在這裡取代。":"把 GitHub 權杖貼在這裡，這台裝置就可以編輯。權杖只存在這台裝置上，別人就算知道密碼也只能看、不能改。每台想編輯的裝置都要貼一次。";
   document.getElementById("permmsg").textContent="";perm.hidden=false;setTimeout(()=>document.getElementById("permtok").focus(),50)}
 document.getElementById("permclose").onclick=()=>{perm.hidden=true};
 perm.addEventListener("click",e=>{if(e.target===perm)perm.hidden=true});
@@ -518,3 +527,39 @@ async function askAI(){const q=aiq.value.trim();if(!q)return;
   }catch(e){if(e&&e.code==="cancelled")return;const m={not_granted:"沒有允許使用 AI 問答。",rate_limited:"問太多次了，請稍後再試。"}[e&&e.code];
     aians.innerHTML=`<div class="q">${esc(q)}</div><p>${esc(m||("出錯了："+((e&&e.message)||e)))}</p>`}
   finally{if(ctl===aiCtl){aigo.disabled=false}}}
+
+/* ---------- 整理 mode: pick words and move them to another theme/subcategory, drag rows to reorder ---------- */
+function orgBar(){const orgbar=document.getElementById("orgbar"),orgto=document.getElementById("orgto");const on=ORG()&&st.view==="word";orgbar.hidden=!on;document.body.classList.toggle("orgon",on);if(!on)return;
+  document.getElementById("orgn").textContent=st.sel.size?`已選 ${st.sel.size} 個字`:"還沒選字";
+  const real=THEMES.filter(t=>!t.virtual);const cur=orgto.value;
+  orgto.innerHTML=`<option value="">搬到…</option>`+real.map((t,i)=>`<optgroup label="${esc(t.name)}"><option value="${i}:-1">${esc(t.name)}（不分小分類）</option>${t.subs.map((x,j)=>`<option value="${i}:${j}">${esc(t.name)} › ${esc(x)}</option>`).join("")}</optgroup>`).join("");
+  orgto.value=cur;document.getElementById("orggo").disabled=!st.sel.size}
+document.getElementById("out").addEventListener("click",e=>{if(!ORG())return;const r=e.target.closest(".w");if(!r||e.target.closest(".say,.grip"))return;
+  e.preventDefault();e.stopImmediatePropagation();if(st.view!=="word")return;
+  const k=r.dataset.k;if(st.sel.has(k))st.sel.delete(k);else st.sel.add(k);
+  r.classList.toggle("picked",st.sel.has(k));const c=r.querySelector(".ck");if(c)c.classList.toggle("on",st.sel.has(k));orgBar()},true);
+document.getElementById("orgdone").onclick=()=>{st.org=false;st.sel.clear();draw()};
+document.getElementById("orggo").onclick=()=>{const v=document.getElementById("orgto").value;if(!v){toast("請先選要搬到哪裡");return}
+  const [ti,si]=v.split(":").map(Number),T=THEMES.filter(t=>!t.virtual)[ti];if(!T)return;
+  const theme=T.name,sub=si>=0?T.subs[si]:null,from=st.theme;let n=0;
+  for(const id of st.sel){const w=WORDS.find(x=>x.id===id);if(!w)continue;
+    let ms=w.meanings.filter(m=>inT(m,from));if(!ms.length)ms=w.meanings;
+    ms.forEach(m=>{m.topics=m.topics.filter(x=>from==="__none"?TNAMES.has(x.theme)&&x.theme!==theme:x.theme!==from&&x.theme!==theme);m.topics.push({theme,sub})});
+    normalize(w);saveWord(clone(w));n++}
+  st.sel.clear();refresh();toast(`已把 ${n} 個字搬到「${theme}${sub?" › "+sub:""}」`)};
+/* drag: hold the ≡ handle; the row follows the finger, other rows make room; order is saved for all devices */
+let drag=null;
+document.getElementById("out").addEventListener("pointerdown",e=>{const g=e.target.closest(".grip");if(!g||!ORG())return;e.preventDefault();
+  const row=g.closest(".w"),list=row.parentElement;drag={row,list,y:e.clientY,id:e.pointerId};row.classList.add("dragging");g.setPointerCapture(e.pointerId)});
+document.addEventListener("pointermove",e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();
+  const {row,list}=drag;const rows=[...list.querySelectorAll(".w")].filter(r=>r!==row);
+  const after=rows.find(r=>{const b=r.getBoundingClientRect();return e.clientY<b.top+b.height/2});
+  if(after){if(row.nextElementSibling!==after)list.insertBefore(row,after)}else if(list.lastElementChild!==row)list.appendChild(row);
+  if(e.clientY<90)scrollBy(0,-12);else if(e.clientY>innerHeight-90)scrollBy(0,12)});
+function endDrag(e){if(!drag||e.pointerId!==drag.id)return;const {row,list}=drag;drag=null;row.classList.remove("dragging");
+  const keys=[...list.querySelectorAll(".w")].map(r=>r.dataset.k);const ph=st.view==="phrase";
+  const all=ph?sortPh(WORDS.flatMap(w=>w.phrases.map(p=>[w,p]))).map(([w,p])=>w.id+":"+p.id):WORDS.map(w=>w.id);
+  const set=new Set(keys),slots=all.map((k,i)=>set.has(k)?i:-1).filter(i=>i>=0);slots.forEach((pos,j)=>{all[pos]=keys[j]});
+  ORDER={...ORDER,[ph?"phrases":"words"]:all};write("meta/order",{words:ORDER.words||null,phrases:ORDER.phrases||null,t:Date.now()});refresh()}
+document.addEventListener("pointerup",endDrag);
+document.addEventListener("pointercancel",endDrag);
