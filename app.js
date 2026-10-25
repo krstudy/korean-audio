@@ -80,8 +80,8 @@ document.addEventListener("click",e=>{if(e.target.closest("#ed"))return;const b=
 function mark(ko,hl){let s=esc(ko);(hl||[]).filter(Boolean).slice().sort((a,b)=>b.length-a.length).forEach(h=>{const e=esc(h);if(e)s=s.split(e).join(`\u0000${e}\u0001`)});
   return s.replace(/\u0000/g,'<span class="hl">').replace(/\u0001/g,'</span>');}
 const ex=e=>`<div class="ex"><div class="t"><div class="k"${sa(e.ko,e.audio)}>${mark(e.ko,e.hl)}</div><div class="z">${esc(e.zh)}</div>${e.note?`<div class="note">${esc(e.note)}</div>`:""}</div>${say(e.ko,e.audio)}</div>`;
-/* phrases show the 요 form first, dictionary form in brackets: 마셔요（물을 마시다）, and play the 요-form audio (audio_yo). */
-const yo=p=>p.yo?`<span class="yo">（${esc(p.phrase)}）</span>`:"";
+/* phrases show the 요 form first, dictionary form of the verb only in brackets: 물을 마셔요（마시다）, and play the 요-form audio (audio_yo). */
+const yo=p=>{if(!p.yo)return "";const n=p.yo.trim().split(/\s+/).length,w=p.phrase.trim().split(/\s+/);return `<span class="yo">（${esc(w.slice(Math.max(0,w.length-n)).join(" "))}）</span>`};
 /* p.yo holds only the conjugated ending ("못 들어요" for "알람을 못 듣다"): swap it in for the same number of words at the end */
 const yoFull=p=>{if(!p.yo)return p.phrase;const y=p.yo.trim().split(/\s+/),w=p.phrase.trim().split(/\s+/);return w.length>y.length?[...w.slice(0,w.length-y.length),...y].join(" "):p.yo};
 const pAud=p=>p.yo?(p.audio_yo||null):p.audio; /* 요-form audio; browser voice reads the 요 form until it is made */
@@ -109,7 +109,7 @@ function parts(w,tk){
       ${ph.similar.map(s=>`<div class="alt"><span>相似${phx(s)}<span class="az">${esc(s.zh)}</span></span>${say(yoFull(s),pAud(s))}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}
       ${ph.opposite.map(s=>`<div class="alt"><span>相反${phx(s)}<span class="az">${esc(s.zh)}</span></span>${say(yoFull(s),pAud(s))}</div>${s.example&&s.example.ko?ex(s.example):""}`).join("")}</details>`:""}</div>`).join("")||`<p class="note" style="padding-top:12px">還沒有片語</p>`},
     {k:"rel",n:"近反義",c:w.synonyms.length+w.antonyms.length,html:rels?`<div class="rels">${rels}</div>`:`<p class="note" style="padding-top:12px">還沒有近義詞或反義詞</p>`},
-    {k:"form",n:w.pos.includes("名詞")&&!f.stem?"助詞":"變化",c:f.forms.length,html:`${f.irregular?`<p class="note" style="margin-top:14px">${esc(f.irregular)}</p>`:""}${f.forms.length?`<div class="forms" style="margin-top:10px">${f.forms.map(x=>`<div><small>${esc(x.label)}</small><span class="fv"><b${sa(spoken(x.form),x.audio)}>${esc(x.form)}</b>${x.pron?` <i>${esc(x.pron)}</i>`:""}</span>${say(spoken(x.form),x.audio)}</div>`).join("")}</div>`:`<p class="note" style="padding-top:12px">還沒有型態變化</p>`}`}
+    {k:"form",n:w.pos.includes("名詞")&&!f.stem?"助詞":"變化",c:f.forms.length,html:`${f.irregular?`<p class="note" style="margin-top:14px">${esc(f.irregular)}</p>`:""}${f.forms.length?`<div class="forms" style="margin-top:10px">${f.forms.map(x=>`<div><small>${esc(x.label)}</small><span class="fv"><b>${esc(x.form)}</b>${x.pron?` <i>${esc(x.pron)}</i>`:""}</span></div>`).join("")}</div>`:`<p class="note" style="padding-top:12px">還沒有型態變化</p>`}`}
   ];
 }
 let st={theme:null,sub:null,pos:null,q:"",cur:null,tab:"mean",visible:[],view:"word",kf:null,org:false,sel:new Set()};
