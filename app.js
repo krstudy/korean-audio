@@ -106,7 +106,7 @@ function parts(w,tk){
 }
 let st={theme:null,sub:null,pos:null,q:"",cur:null,tab:"mean",visible:[],view:"word",kf:null};
 try{const h=JSON.parse(localStorage.getItem(LS+"-ui")||"{}");if(h.hide)document.body.classList.add("hidezh")}catch(e){}
-const isK=w=>!!KNOWN[w.id];
+const isK=w=>false; /* 會了／還不會 removed (2026-10-25); KNOWN is still loaded and kept */
 const kOK=w=>!st.kf||(st.kf==="k"?isK(w):!isK(w));
 function match(w){const q=st.q.trim().toLowerCase();
   return (!st.pos||w.pos.includes(st.pos))&&kOK(w)&&(!q||w.word.includes(q)||w.id.includes(q)||w.meanings.some(m=>m.zh.includes(q)));}
@@ -130,7 +130,7 @@ function draw(){
   if(q){
     T.innerHTML=`<span class="crumb">搜尋全部主題</span>`;
     const hits=[];THEMES.forEach(t=>t.words.forEach(w=>{if(!hits.some(h=>h[1]===w))hits.push([t.key,w])}));
-    const pool=hits.filter(h=>loose(h[1])).map(h=>h[1]);posTabs(pool);kTabs(pool);
+    const pool=hits.filter(h=>loose(h[1])).map(h=>h[1]);posTabs(pool);
     const ws=hits.filter(h=>match(h[1]));
     const ql=q.toLowerCase(), ps=[];hits.forEach(([tk,w])=>{if((!st.pos||w.pos.includes(st.pos))&&kOK(w))w.phrases.forEach(p=>{if(pmatch(p,ql))ps.push([tk,w,p])})});
     viewTabs(ws.length,ps.length);
@@ -141,7 +141,7 @@ function draw(){
   if(!th){
     st.theme=null;T.innerHTML="";["pos","view","kf"].forEach(i=>document.getElementById(i).hidden=true);
     const cards=THEMES.filter(t=>!t.virtual||t.words.length);
-    out.innerHTML=`<div class="tgrid">${cards.map(t=>`<button class="tcard${t.virtual?" none":""}" type="button" data-open="${esc(t.key)}"><span class="tn">${esc(t.name)}</span>${t.ko?`<span class="tko">${esc(t.ko)}</span>`:""}<span class="tc">${t.words.length} 個字・會了 ${t.words.filter(isK).length}</span>${t.subs.length?`<span class="ts">${t.subs.map(esc).join("・")}</span>`:""}</button>`).join("")}</div>
+    out.innerHTML=`<div class="tgrid">${cards.map(t=>`<button class="tcard${t.virtual?" none":""}" type="button" data-open="${esc(t.key)}"><span class="tn">${esc(t.name)}</span>${t.ko?`<span class="tko">${esc(t.ko)}</span>`:""}<span class="tc">${t.words.length} 個字</span>${t.subs.length?`<span class="ts">${t.subs.map(esc).join("・")}</span>`:""}</button>`).join("")}</div>
 `;return;
   }
   const subs=th.subs;
@@ -151,7 +151,7 @@ function draw(){
   const inSub=w=>!st.sub||(st.sub==="未分類"?!subs.includes(subOf(w,th.key)):subOf(w,th.key)===st.sub);
   T.innerHTML=(RET?`<button class="retbtn" type="button" data-ret="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-5-5 5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>回到「${esc(RET.word)}」</button>`:"")+`<button class="crumbback" type="button" data-home="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>主題</button><span class="crumb"><b>${esc(th.name)}</b> <span class="tko">${esc(th.ko)}</span></span>`+
     (opts.length?`<div class="subchips">${opts.map(s=>`<button class="tchip" type="button" data-sub="${esc(s??"")}" aria-pressed="${st.sub===s}">${esc(s??"全部")}<small>${th.words.filter(w=>s===null||(s==="未分類"?!subs.includes(subOf(w,th.key)):subOf(w,th.key)===s)).length}</small></button>`).join("")}</div>`:"");
-  const pool=th.words.filter(w=>inSub(w)&&loose(w));posTabs(pool);kTabs(pool);
+  const pool=th.words.filter(w=>inSub(w)&&loose(w));posTabs(pool);
   const ws=th.words.filter(w=>inSub(w)&&match(w));
   const ps=ws.flatMap(w=>themePhrases(w,th.key).map(p=>[w,p]));
   viewTabs(ws.length,ps.length);
@@ -169,7 +169,7 @@ function renderSheet(){
   document.getElementById("tabs").innerHTML=tabs.map(x=>`<button type="button" role="tab" data-tab="${x.k}" aria-selected="${st.tab===x.k}">${x.n}${x.c!=null?`<small>${x.c}</small>`:""}</button>`).join("");
   document.getElementById("sbody").innerHTML=tabs.find(x=>x.k===st.tab).html;markQ(document.getElementById("sbody"));
   prefetch(document.getElementById("sbody"));{const all=document.createElement("div");all.innerHTML=tabs.map(x=>x.html).join("");prefetch(all)}
-  const mk=document.getElementById("markk");mk.setAttribute("aria-pressed",isK(w));mk.textContent=isK(w)?"✓ 已經會了（再按一下取消）":"標記為「會了」";
+
   const i=st.visible.findIndex(v=>v[0]===tk&&v[1]===id);
   document.getElementById("prev").disabled=i<=0; document.getElementById("next").disabled=i<0||i>=st.visible.length-1;
 }
@@ -188,7 +188,6 @@ document.getElementById("sbody").addEventListener("click",e=>{const g=e.target.c
 function goBack(){const r=RET;if(!r)return;RET=null;Object.assign(st,{theme:r.theme,sub:r.sub,pos:r.pos,kf:r.kf,view:r.view,q:r.q});document.getElementById("q").value=r.q;draw();scrollTo(0,r.y);
   openWord(r.cur[0],r.cur[1]);st.tab=r.tab;renderSheet();sheet.scrollTop=r.sy}
 document.getElementById("sbody").addEventListener("click",e=>{if(!document.body.classList.contains("hidezh"))return;const li=e.target.closest(".mean li,.ex .z,.other li");if(li)li.classList.toggle("shown")});
-document.getElementById("markk").onclick=()=>{const id=st.cur[1];if(KNOWN[id])delete KNOWN[id];else KNOWN[id]=1;saveKnown();renderSheet();draw()};
 document.getElementById("hidebtn").onclick=e=>{const on=document.body.classList.toggle("hidezh");e.currentTarget.setAttribute("aria-pressed",on);try{localStorage.setItem(LS+"-ui",JSON.stringify({hide:on}))}catch(x){}};
 document.getElementById("hidebtn").setAttribute("aria-pressed",document.body.classList.contains("hidezh"));
 document.getElementById("themes").onclick=e=>{if(e.target.closest("[data-ret]")){goBack();return}
