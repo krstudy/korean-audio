@@ -458,16 +458,23 @@ async function put(path,branch,obj,sha,tok){const r=await fetch(API+"/contents/"
   if(!r.ok)throw new Error("GitHub 回應 "+r.status);return r.json()}
 const S=window.__S={token,
   file:async p=>{const u=await get(p);return u?dec(u):null},
-  async pull(){const r=await fetch(API+"/contents/edits.enc?ref=edits",{headers:hdr(),cache:"no-store"});
-    if(r.status===404)return{map:{},sha:null};if(!r.ok)throw new Error("讀取失敗 "+r.status);
+  /* an expired token makes GitHub answer 401 even for this public file, so read again without it; if the API is down or rate limited, read the raw file (read-only) */
+  async pull(){const u=API+"/contents/edits.enc?ref=edits";let r=null;
+    try{r=await fetch(u,{headers:hdr(),cache:"no-store"})}catch(e){}
+    if(r&&r.status===401&&S.token){S.tokBad=true;try{r=await fetch(u,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"})}catch(e){r=null}}
+    else if(r&&r.ok)S.tokBad=false;
+    if(r&&r.status===404)return{map:{},sha:null};
+    if(!r||!r.ok){const r3=await fetch("https://raw.githubusercontent.com/"+REPO+"/edits/edits.enc?t="+Date.now(),{cache:"no-store"});
+      if(r3.status===404)return{map:{},sha:null};if(!r3.ok)throw new Error("讀取失敗 "+r3.status);
+      return{map:JSON.parse(td.decode(await dec(new Uint8Array(await r3.arrayBuffer())))),sha:undefined}}
     const j=await r.json();let b=j.content;
     if(!b||j.encoding==="none"){const r2=await fetch(API+"/git/blobs/"+j.sha,{headers:hdr(),cache:"no-store"});b=(await r2.json()).content} /* over 1 MB */
     return{map:JSON.parse(td.decode(await dec(b64d(b)))),sha:j.sha}},
-  async push(m,sha){return put("edits.enc","edits",m,sha)},
+  async push(m,sha){if(S.tokBad)throw new Error("編輯權杖過期了，請到「管理 → 編輯權限」貼一個新的");if(sha===undefined)throw new Error("暫時連不上 GitHub，等一下再試");return put("edits.enc","edits",m,sha)},
   async setToken(t){const r=await fetch(API,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+t},cache:"no-store"});
     if(r.status===401)throw new Error("這個權杖不能用，請確認有完整複製");
     if(!r.ok)throw new Error("這個權杖看不到 korean-audio（Repository access 要選 korean-audio）");
-    S.token=t;ls("kr-tok",t)}};
+    S.token=t;S.tokBad=false;ls("kr-tok",t)}};
 window.__D=D;
 const sc=document.createElement("script");sc.src="app.js?v="+meta.v;sc.onload=()=>{$("lock").hidden=true};document.body.appendChild(sc);
 })();

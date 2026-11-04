@@ -229,6 +229,7 @@ let saving=false,saveT=null,fails=0;
 function showSync(){const n=Object.keys(pend).length+(saving?1:0);syncEl.title="";
   if(!S.token){syncEl.textContent="⚠ 只存在這台裝置";syncEl.className="sync warn";syncEl.title="還沒設定編輯權限（管理 → 設定編輯權限），修改只會存在這個瀏覽器";return}
   if(dbState==="loading"){syncEl.textContent="讀取中…";syncEl.className="sync";return}
+  if(S.tokBad){syncEl.textContent="⚠ 編輯權杖過期（可以看，不能存）";syncEl.className="sync warn";syncEl.title="到「管理 → 編輯權限」貼一個新的權杖";return}
   if(fails||dbState==="off"){syncEl.textContent=fails?"⚠ 有修改沒存到":"⚠ 連不上，先用這台裝置的資料";syncEl.className="sync warn";return}
   syncEl.textContent=n?"儲存中…":"✓ 已同步";syncEl.className="sync"}
 function write(path,body){pend[path]=clone(body);cacheLocal();if(S.token){clearTimeout(saveT);saveT=setTimeout(flush,700)}showSync()}
