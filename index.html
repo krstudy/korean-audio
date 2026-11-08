@@ -149,13 +149,13 @@ details.fm.sm>summary{font-size:.8rem;font-weight:500}
 .sbody .dhead{padding-top:14px}
 .phc{border-top:1px dashed var(--line);padding:12px 0}
 .sublab{font-size:.78rem;color:var(--muted);margin:8px 0 2px;letter-spacing:.05em}
-.relbox{margin-top:10px;padding:8px 10px 6px;border-radius:10px;border-left:4px solid var(--accent);background:var(--accent-soft)}
-.relbox.opp{border-left-color:var(--warm);background:var(--warm-soft)}
+.relbox,.rsec{--bx-bg:color-mix(in srgb,var(--accent-soft) 60%,var(--surface));--bx-bd:color-mix(in srgb,var(--accent) 65%,var(--surface))}
+.relbox.opp,.rsec.ant{--bx-bg:color-mix(in srgb,var(--warm-soft) 60%,var(--surface));--bx-bd:color-mix(in srgb,var(--warm) 65%,var(--surface))}
+.relbox{margin-top:10px;padding:8px 10px 6px;border-radius:10px;border-left:4px solid var(--bx-bd);background:var(--bx-bg)}
 .relbox .alt{margin-top:0;color:var(--fg);align-items:flex-start;font-size:.9rem}
 .relbox .rph{min-width:0;flex:1}
 .relbox .alt b{margin-left:0}
-.rtag{flex:none;font-size:.75rem;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 9px;margin-top:2px}
-.relbox.opp .rtag{background:var(--warm)}
+.rtag{flex:none;font-size:.75rem;font-weight:700;color:#fff;background:var(--bx-bd);border-radius:999px;padding:1px 9px;margin-top:2px}
 :root[data-theme="dark"] .rtag{color:#1a1a14}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rtag{color:#1a1a14}}
 .phc:first-child{border-top:0}
@@ -342,8 +342,12 @@ h1{font-size:1.05rem;letter-spacing:.02em}
 .rels{padding-top:12px;display:grid;gap:16px}
 .rh{display:flex;align-items:center;gap:6px;margin:0 0 4px;letter-spacing:0;font-size:.8rem}
 .rh span{padding:2px 10px;border-radius:999px;font-weight:700}
-.rsec.syn .rh span{background:var(--accent-soft);color:var(--accent)}
-.rsec.ant .rh span{background:var(--warm-soft);color:var(--warm)}
+.rsec{padding:8px 12px 4px;border-radius:10px;border-left:4px solid var(--bx-bd);background:var(--bx-bg)}
+.rsec .rh span{background:var(--bx-bd);color:#fff}
+:root[data-theme="dark"] .rsec .rh span{color:#1a1a14}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rsec .rh span{color:#1a1a14}}
+.rlist li{border-bottom-color:var(--bx-bd)!important;border-bottom-style:dotted!important}
+.rlist li:last-child{border-bottom:0!important}
 .rh small{color:var(--muted);font-weight:400}
 .rlist{list-style:none;margin:0;padding:0}
 .rlist li{padding:9px 0;border-bottom:1px dashed var(--line)}
