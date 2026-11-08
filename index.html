@@ -148,6 +148,16 @@ details.fm.sm>summary{font-size:.8rem;font-weight:500}
 .sbody{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 18px 18px;margin-top:4px}
 .sbody .dhead{padding-top:14px}
 .phc{border-top:1px dashed var(--line);padding:12px 0}
+.sublab{font-size:.78rem;color:var(--muted);margin:8px 0 2px;letter-spacing:.05em}
+.relbox{margin-top:10px;padding:8px 10px 6px;border-radius:10px;border-left:4px solid var(--accent);background:var(--accent-soft)}
+.relbox.opp{border-left-color:var(--warm);background:var(--warm-soft)}
+.relbox .alt{margin-top:0;color:var(--fg);align-items:flex-start;font-size:.9rem}
+.relbox .rph{min-width:0;flex:1}
+.relbox .alt b{margin-left:0}
+.rtag{flex:none;font-size:.75rem;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 9px;margin-top:2px}
+.relbox.opp .rtag{background:var(--warm)}
+:root[data-theme="dark"] .rtag{color:#1a1a14}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .rtag{color:#1a1a14}}
 .phc:first-child{border-top:0}
 .phc .pt b{font-family:var(--ko);font-size:1.1rem;color:var(--head)}
 .phc .yo{font-family:var(--ko);color:var(--muted);font-weight:400;font-size:.95rem}
