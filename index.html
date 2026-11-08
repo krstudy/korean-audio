@@ -1,6 +1,5 @@
 <!doctype html><html lang="zh-Hant"><head><meta name="robots" content="noindex"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>韓文學習</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
 /* Layout: one column. Home shows one card per theme; inside a theme, sticky bar has back link, subcategory chips and part-of-speech tabs over one flat word list; each word is a compact row; tapping it opens a full detail sheet with tabs. */
 :root{
@@ -448,13 +447,18 @@ const b64e=u8=>{let s="";for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCod
 const b64d=b=>{const s=atob(b.replace(/\s/g,"")),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
 let key=null;
+/* start the slow requests right away instead of one after another */
+const EDITS=API+"/contents/edits.enc?ref=edits",tok0=ls("kr-tok");
+const pre=fetch(EDITS,{headers:{Accept:"application/vnd.github+json",...(tok0?{Authorization:"Bearer "+tok0}:{})},cache:"no-store"}).catch(()=>null);
+const gunzip=async u8=>new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
 const dec=async u8=>new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:u8.subarray(0,12)},key,u8.subarray(12)));
 const enc=async u8=>{const iv=crypto.getRandomValues(new Uint8Array(12));const c=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,u8));const o=new Uint8Array(12+c.length);o.set(iv);o.set(c,12);return o};
 const get=async(p,o)=>{const r=await fetch(p,o);if(!r.ok)return null;return new Uint8Array(await r.arrayBuffer())};
 let meta,dataRaw;
 try{[meta,dataRaw]=await Promise.all([fetch("meta.json",{cache:"no-cache"}).then(r=>r.json()),get("data.enc",{cache:"no-cache"})]);if(!dataRaw)throw 0}
 catch(e){$("locktip").textContent="讀不到網站資料，請檢查網路後重新整理。";return}
-async function tryKey(raw){try{key=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["encrypt","decrypt"]);return JSON.parse(td.decode(await dec(dataRaw)))}catch(e){key=null;return null}}
+{const l=document.createElement("link");l.rel="preload";l.as="script";l.href="app.js?v="+meta.v;document.head.appendChild(l)}
+async function tryKey(raw){try{key=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["encrypt","decrypt"]);let u=await dec(dataRaw);if(meta.z)u=await gunzip(u);return JSON.parse(td.decode(u))}catch(e){key=null;return null}}
 let D=null;const saved=ls("kr-key");if(saved)D=await tryKey(b64d(saved));
 if(!D){ls("kr-key",null);$("locktip").textContent="請輸入密碼（每台裝置只要輸入一次）";$("lockpw").hidden=$("lockgo").hidden=false;$("lockpw").focus();
   await new Promise(res=>{$("lockform").onsubmit=async e=>{e.preventDefault();const pw=$("lockpw").value;if(!pw)return;$("lockmsg").textContent="解鎖中…";
@@ -470,11 +474,12 @@ async function put(path,branch,obj,sha,tok){const r=await fetch(API+"/contents/"
   if(r.status===401)throw new Error("權杖不能用或已經過期，請到「管理 → 編輯權限」換一個新的");
   if(r.status===403||r.status===404)throw new Error("權杖沒有寫入權限（Contents 要選 Read and write）");
   if(!r.ok)throw new Error("GitHub 回應 "+r.status);return r.json()}
-const S=window.__S={token,
+const S=window.__S={token,_pre:pre,
   file:async p=>{const u=await get(p);return u?dec(u):null},
   /* an expired token makes GitHub answer 401 even for this public file, so read again without it; if the API is down or rate limited, read the raw file (read-only) */
-  async pull(){const u=API+"/contents/edits.enc?ref=edits";let r=null;
-    try{r=await fetch(u,{headers:hdr(),cache:"no-store"})}catch(e){}
+  async pull(){const u=EDITS;let r=null;
+    if(S._pre&&S.token===tok0){r=await S._pre}S._pre=null; /* first read reuses the request started at page load */
+    if(!r)try{r=await fetch(u,{headers:hdr(),cache:"no-store"})}catch(e){}
     if(r&&r.status===401&&S.token){S.tokBad=true;try{r=await fetch(u,{headers:{Accept:"application/vnd.github+json"},cache:"no-store"})}catch(e){r=null}}
     else if(r&&r.ok)S.tokBad=false;
     if(r&&r.status===404)return{map:{},sha:null};
