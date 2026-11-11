@@ -637,8 +637,13 @@ prdlg.addEventListener("change",prSync);
 document.getElementById("prclose").onclick=()=>prdlg.hidden=true;
 prdlg.addEventListener("click",e=>{if(e.target===prdlg)prdlg.hidden=true});
 document.getElementById("prgo").onclick=()=>{const o=prOpts();try{localStorage.setItem(PRK,JSON.stringify(o))}catch(e){}
-  prBuild(PRJOB,o);prdlg.hidden=true;PRJOB.done=true;setTimeout(()=>window.print(),60)};
+  prBuild(PRJOB,o);prdlg.hidden=true;PRJOB.done=true;prShow();doPrint()};
+/* print() must run inside the tap itself: iPhone Safari ignores it after a timer */
+function doPrint(){try{window.print()}catch(e){}}
+function prShow(){document.body.classList.add("prview");printout.scrollTop=0}
+document.getElementById("prx").onclick=()=>{document.body.classList.remove("prview");PRJOB=null};
+document.getElementById("prnow").onclick=()=>{if(PRJOB)PRJOB.done=true;doPrint()};
 /* the browser's own print (⌘P, 分享 → 列印) also gets the clean copy of what is on screen */
-addEventListener("beforeprint",()=>{if(PRJOB&&PRJOB.done){PRJOB=null;return}const j=prScope();if(j.groups.some(g=>g.items.length))prBuild(j,{mode:"full",ex:1,ph:1,rel:1,form:1})});
+addEventListener("beforeprint",()=>{if(document.body.classList.contains("prview")||(PRJOB&&PRJOB.done)){if(PRJOB)PRJOB.done=false;return}const j=prScope();if(j.groups.some(g=>g.items.length))prBuild(j,{mode:"full",ex:1,ph:1,rel:1,form:1})});
 document.getElementById("printw").onclick=openPrint;
 menu.addEventListener("click",e=>{if(e.target.closest("[data-print]"))openPrint()});

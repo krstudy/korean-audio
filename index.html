@@ -386,6 +386,12 @@ h1{font-size:1.05rem;letter-spacing:.02em}
 .prdlg fieldset.off{opacity:.45}
 .prdlg .aigo{width:100%;margin-top:4px}
 #printout{display:none}
+/* on-screen preview (also the fallback when a phone ignores window.print: 分享 → 列印) */
+#prbar{display:none}
+body.prview{overflow:hidden}
+body.prview #prbar{display:flex;position:fixed;left:0;right:0;top:0;z-index:91;gap:8px;align-items:center;background:var(--surface);border-bottom:1px solid var(--line);padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+#prbar .prtip{flex:1;font-size:.8rem;color:var(--muted);line-height:1.35}
+body.prview #printout{display:block;position:fixed;inset:0;z-index:90;overflow-y:auto;background:#fff;color:#111;padding:calc(64px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));font-size:14px;line-height:1.55}
 @media print{
   @page{margin:14mm 12mm}
   html,body{background:#fff!important;color:#111!important}
@@ -393,7 +399,8 @@ h1{font-size:1.05rem;letter-spacing:.02em}
   body::before{display:none}
   body.locked{overflow:visible!important}
   body>*:not(#printout){display:none!important}
-  #printout{display:block!important;color:#111}
+  #printout{display:block!important;color:#111;position:static!important;overflow:visible!important;padding:0!important;font-size:10.5pt!important}
+  body.prview{overflow:visible!important}
 }
 #printout{font-family:var(--ui)}
 #printout .pko{font-family:var(--ko)}
@@ -490,6 +497,7 @@ h1{font-size:1.05rem;letter-spacing:.02em}
   <fieldset><legend>自我測驗</legend><label><input type="checkbox" id="prnozh"> 中文留空白</label></fieldset>
   <button class="aigo" type="button" id="prgo">列印</button>
 </div></div>
+<div id="prbar"><button class="back" type="button" id="prx">關閉</button><span class="prtip">沒跳出列印畫面的話：Safari 下方「分享」→「列印」</span><button class="save" type="button" id="prnow">列印</button></div>
 <div id="printout"></div>
 <style>
 .lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
