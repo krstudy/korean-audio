@@ -573,3 +573,72 @@ function endDrag(e){if(!drag||e.pointerId!==drag.id)return;const {row,list}=drag
   ORDER={...ORDER,[ph?"phrases":"words"]:all};write("meta/order",{words:ORDER.words||null,phrases:ORDER.phrases||null,t:Date.now()});refresh()}
 document.addEventListener("pointerup",endDrag);
 document.addEventListener("pointercancel",endDrag);
+/* ---------- print (2026-11-11): builds a clean copy in #printout (examples open, no buttons) and calls window.print() ----------
+   Scope = what is on screen: the open word sheet, else the rows in #out (theme / subcategory / part of speech / search, words or phrases), else (home) every theme. */
+const prdlg=document.getElementById("prdlg"),printout=document.getElementById("printout");
+const PRK=LS+"-print";let PRJOB=null;
+const prEx=e=>e&&e.ko?`<div class="pex"><div class="pko">${mark(e.ko,e.hl)}</div>${e.zh?`<div class="pz">${esc(e.zh)}</div>`:""}${e.note?`<div class="pn">${esc(e.note)}</div>`:""}</div>`:"";
+const prPhName=p=>`<span class="pko">${esc(yoFull(p))}</span>${p.yo?`<span class="yo">（${esc(p.phrase.trim().split(/\s+/).slice(-p.yo.trim().split(/\s+/).length).join(" "))}）</span>`:""}`;
+function prPhrase(p,o){return `<div class="pph"><span class="pl">${prPhName(p)}</span> <span class="pz">${esc(p.zh||"")}</span>
+  ${p.explanation?`<div class="pexp pz">${esc(p.explanation)}</div>`:""}${o.ex?p.examples.map(prEx).join(""):""}
+  ${p.similar.map(s=>`<div class="prel"><span class="rt">相似</span>${prPhName(s)} <span class="pz">${esc(s.zh||"")}</span>${o.ex?prEx(s.example):""}</div>`).join("")}
+  ${p.opposite.map(s=>`<div class="prel"><span class="rt">相反</span>${prPhName(s)} <span class="pz">${esc(s.zh||"")}</span>${o.ex?prEx(s.example):""}</div>`).join("")}</div>`}
+function prWord(tk,w,o){
+  const mine=w.meanings.filter(m=>inT(m,tk)),rest=w.meanings.filter(m=>!inT(m,tk)),ms=tk?[...mine,...rest]:w.meanings;
+  const exIds=new Set(mine.flatMap(m=>m.example_ids)),linked=e=>w.meanings.some(m=>m.example_ids.includes(e.id));
+  const exs=tk?[...w.examples.filter(e=>exIds.has(e.id)||!linked(e)),...w.examples.filter(e=>!exIds.has(e.id)&&linked(e))]:w.examples;
+  const pids=new Set(mine.flatMap(m=>m.phrase_ids)),phs=tk?[...w.phrases.filter(p=>pids.has(p.id)),...w.phrases.filter(p=>!pids.has(p.id))]:w.phrases;
+  const rels=[["近義",w.synonyms],["反義",w.antonyms]].filter(r=>r[1].length);const f=w.inflections||{forms:[]};
+  let h=`<div class="phd"><b class="pko">${esc(w.word)}</b>${w.pronunciation?`<span class="ppr pko">${esc(w.pronunciation)}</span>`:""}${w.pos.map(p=>`<span class="ppos">${esc(p)}</span>`).join("")}</div>
+    <ol class="pmn">${ms.map(m=>`<li><span class="pz">${esc(m.zh)}</span></li>`).join("")}</ol>`;
+  if(o.ex&&exs.length)h+=`<div class="plab">例句</div>${exs.map(prEx).join("")}`;
+  if(o.ph&&phs.length)h+=`<div class="plab">片語</div>${phs.map(p=>prPhrase(p,o)).join("")}`;
+  if(o.rel&&rels.length)h+=rels.map(([lab,a])=>`<div class="plab">${lab}</div>${a.map(r=>`<div class="prel"><b class="pko">${esc(r.word)}</b> <span class="pz">${esc(r.zh||"")}</span>${r.note?`<div class="pexp pz">${esc(r.note)}</div>`:""}${o.ex?(r.examples||[]).map(prEx).join(""):""}</div>`).join("")}`).join("");
+  if(o.form&&(f.forms.length||f.irregular))h+=`<div class="plab">${w.pos.includes("名詞")&&!f.stem?"助詞":"變化"}</div>${f.irregular?`<div class="pexp">${esc(f.irregular)}</div>`:""}<div class="pforms">${f.forms.map(x=>`<span><small>${esc(x.label)}</small><b class="pko">${esc(x.form)}</b>${x.pron?` <i class="pko">${esc(x.pron)}</i>`:""}</span>`).join("")}</div>`;
+  const long=(o.ex?exs.length:0)+(o.ph?phs.length*3:0)>10;
+  return `<div class="pent${long?" long":""}">${h}</div>`}
+/* what to print: {title, groups:[{name, items:[{tk,w,p?}]}], phrases:bool} */
+function prScope(){
+  if(!sheet.hidden&&st.cur){const w=WORDS.find(x=>x.id===st.cur[1]);if(w)return {title:w.word,one:true,groups:[{name:"",items:[{tk:st.cur[0],w}]}]}}
+  const th=THEMES.find(x=>x.key===st.theme),q=st.q.trim();
+  const rows=[...document.querySelectorAll("#out .w")];
+  if(!rows.length&&!q&&!th){/* home: every theme, one section each */
+    const seen=new Set(),groups=THEMES.filter(t=>t.words.length).map(t=>({name:t.name,items:t.words.filter(w=>!seen.has(w.id)&&seen.add(w.id)).map(w=>({tk:t.key,w}))})).filter(g=>g.items.length);
+    return {title:"全部單字",groups}}
+  const ph=rows.some(r=>r.dataset.ph);
+  const items=rows.map(r=>{const w=WORDS.find(x=>x.id===r.dataset.id);if(!w)return null;return {tk:r.dataset.t,w,p:r.dataset.ph?w.phrases.find(x=>x.id===r.dataset.ph):null}}).filter(x=>x&&(!ph||x.p));
+  const filt=[st.pos,ph?"片語":""].filter(Boolean).join("・");
+  const title=(q?`搜尋「${q}」`:th?th.name+(st.sub?"／"+st.sub:""):"")+(filt?`（${filt}）`:"");
+  let groups=[{name:"",items}];
+  if(th&&!q&&!st.sub&&th.subs.length&&!ph){const by=new Map();items.forEach(it=>{const s=th.subs.includes(subOf(it.w,th.key))?subOf(it.w,th.key):"未分類";if(!by.has(s))by.set(s,[]);by.get(s).push(it)});
+    groups=[...th.subs,"未分類"].filter(s=>by.has(s)).map(s=>({name:s,items:by.get(s)}))}
+  return {title,groups,phrases:ph}}
+function prOpts(){const o={mode:prdlg.querySelector("[name=prmode]:checked").value,nozh:document.getElementById("prnozh").checked};
+  prdlg.querySelectorAll("[data-pp]").forEach(c=>o[c.dataset.pp]=c.checked);return o}
+function prSync(){document.getElementById("prparts").classList.toggle("off",prOpts().mode==="list");prdlg.querySelectorAll("[data-pp]").forEach(c=>c.disabled=prOpts().mode==="list")}
+function prBuild(job,o){const n=job.groups.reduce((a,g)=>a+g.items.length,0);
+  const d=new Date(),date=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  let h=`<h1>${esc(job.title||"單字")}</h1><div class="pmeta">${job.one?"":`${n} 個${job.phrases?"片語":"字"}・`}${date}</div>`;
+  for(const g of job.groups){if(g.name)h+=`<h2>${esc(g.name)}</h2>`;
+    if(o.mode==="list"){h+=job.phrases?`<table class="tp"><thead><tr><th>片語</th><th>中文</th><th>單字</th></tr></thead><tbody>${g.items.map(({w,p})=>`<tr><td class="pk">${prPhName(p)}</td><td class="pz">${esc(p.zh||"")}</td><td class="pko">${esc(w.word)}</td></tr>`).join("")}</tbody></table>`
+      :`<table class="tw"><thead><tr><th>單字</th><th>發音</th><th>詞性</th><th>意思</th></tr></thead><tbody>${g.items.map(({tk,w})=>{const z=w.meanings.filter(m=>inT(m,tk)).map(m=>m.zh).join("；")||w.meanings.map(m=>m.zh).join("；");
+        return `<tr><td class="pk pko">${esc(w.word)}</td><td class="pko">${esc(w.pronunciation||"")}</td><td>${esc(w.pos.join("・"))}</td><td class="pz">${esc(z)}</td></tr>`}).join("")}</tbody></table>`}
+    else h+=job.phrases?g.items.map(({w,p})=>`<div class="pent">${prPhrase(p,o)}<div class="pmeta" style="margin:2px 0 0 4px">← ${esc(w.word)}</div></div>`).join(""):g.items.map(({tk,w})=>prWord(tk,w,o)).join("")}
+  printout.className=o.nozh?"nozh":"";printout.innerHTML=h}
+function openPrint(){PRJOB=prScope();const n=PRJOB.groups.reduce((a,g)=>a+g.items.length,0);
+  if(!n){toast("這裡沒有可以列印的單字");return}
+  try{const s=JSON.parse(localStorage.getItem(PRK)||"{}");if(s.mode)prdlg.querySelector(`[name=prmode][value=${s.mode}]`).checked=true;
+    prdlg.querySelectorAll("[data-pp]").forEach(c=>{if(c.dataset.pp in s)c.checked=!!s[c.dataset.pp]});document.getElementById("prnozh").checked=!!s.nozh}catch(e){}
+  if(PRJOB.one)prdlg.querySelector("[name=prmode][value=full]").checked=true;
+  prdlg.querySelectorAll("[name=prmode]").forEach(r=>r.closest("fieldset").hidden=!!PRJOB.one);
+  document.getElementById("prscope").textContent=PRJOB.one?`「${PRJOB.title}」這個字`:`${PRJOB.title}・${n} 個${PRJOB.phrases?"片語":"字"}`;
+  prSync();prdlg.hidden=false}
+prdlg.addEventListener("change",prSync);
+document.getElementById("prclose").onclick=()=>prdlg.hidden=true;
+prdlg.addEventListener("click",e=>{if(e.target===prdlg)prdlg.hidden=true});
+document.getElementById("prgo").onclick=()=>{const o=prOpts();try{localStorage.setItem(PRK,JSON.stringify(o))}catch(e){}
+  prBuild(PRJOB,o);prdlg.hidden=true;PRJOB.done=true;setTimeout(()=>window.print(),60)};
+/* the browser's own print (⌘P, 分享 → 列印) also gets the clean copy of what is on screen */
+addEventListener("beforeprint",()=>{if(PRJOB&&PRJOB.done){PRJOB=null;return}const j=prScope();if(j.groups.some(g=>g.items.length))prBuild(j,{mode:"full",ex:1,ph:1,rel:1,form:1})});
+document.getElementById("printw").onclick=openPrint;
+menu.addEventListener("click",e=>{if(e.target.closest("[data-print]"))openPrint()});

@@ -377,6 +377,59 @@ h1{font-size:1.05rem;letter-spacing:.02em}
 .retbtn{display:inline-flex;align-items:center;gap:4px;border:0;background:var(--accent);color:var(--surface);border-radius:999px;padding:4px 12px 4px 8px;font-weight:700;font-size:.84rem;flex-basis:auto}
 .retbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .rlist details.fm.sm{margin-top:4px}
+/* ---------- print (2026-11-11): 管理 → 列印 prints what is on screen; 列印 on a word sheet prints that word ---------- */
+.prdlg .prscope{margin:6px 0 10px;font-weight:700;color:var(--head)}
+.prdlg fieldset{border:0;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px}
+.prdlg legend{font-size:.8rem;color:var(--muted);padding:0;margin-bottom:4px;width:100%}
+.prdlg label{display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
+.prdlg fieldset[hidden]{display:none}
+.prdlg fieldset.off{opacity:.45}
+.prdlg .aigo{width:100%;margin-top:4px}
+#printout{display:none}
+@media print{
+  @page{margin:14mm 12mm}
+  html,body{background:#fff!important;color:#111!important}
+  body{padding:0!important;font-size:10.5pt;line-height:1.5}
+  body::before{display:none}
+  body.locked{overflow:visible!important}
+  body>*:not(#printout){display:none!important}
+  #printout{display:block!important;color:#111}
+}
+#printout{font-family:var(--ui)}
+#printout .pko{font-family:var(--ko)}
+#printout h1{font-size:15pt;margin:0 0 2px;color:#111}
+#printout .pmeta{color:#666;font-size:9pt;margin-bottom:10px}
+#printout h2{font-size:12pt;margin:14px 0 6px;padding-bottom:2px;border-bottom:1.5px solid #5f6638;color:#5f6638;break-after:avoid}
+#printout .pent{padding:8px 0 9px;border-bottom:1px solid #ccc;break-inside:avoid}
+#printout .pent.long{break-inside:auto}
+#printout .phd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;break-after:avoid}
+#printout .phd b{font-size:14pt}
+#printout .ppr{color:#555}
+#printout .ppos{font-size:8.5pt;border:1px solid #999;border-radius:8px;padding:0 6px;color:#444}
+#printout ol.pmn{margin:3px 0 2px;padding-left:20px}
+#printout .plab{font-size:8.5pt;font-weight:700;color:#5f6638;margin:6px 0 1px;letter-spacing:.05em;break-after:avoid}
+#printout .pex{margin:1px 0 3px 12px;break-inside:avoid}
+#printout .pex .pz,#printout .pex .pn{color:#555;font-size:9.5pt}
+#printout .pex .pn{font-style:italic}
+#printout .hl{color:#c0392b;font-weight:700}
+#printout .pph{margin:4px 0 2px 4px;break-inside:avoid}
+#printout .pph>.pl{font-weight:700}
+#printout .pph .yo{font-weight:400;color:#555}
+#printout .pexp{margin:0 0 1px 12px;font-size:9.5pt;color:#333}
+#printout .prel{margin:2px 0 1px 12px}
+#printout .prel .rt{font-size:8pt;border:1px solid #999;border-radius:6px;padding:0 4px;margin-right:4px;color:#444}
+#printout .prel .pex{margin-left:24px}
+#printout .pforms{display:flex;flex-wrap:wrap;gap:2px 14px;margin-left:12px;font-size:9.5pt}
+#printout .pforms small{color:#666;margin-right:3px}
+#printout table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}
+#printout table.tw th:nth-child(1){width:20%}#printout table.tw th:nth-child(2){width:17%}#printout table.tw th:nth-child(3){width:11%}
+#printout table.tp th:nth-child(1){width:42%}#printout table.tp th:nth-child(3){width:16%}
+#printout th,#printout td{border-bottom:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}
+#printout th{font-size:8.5pt;color:#666;border-bottom:1.5px solid #888}
+#printout tr{break-inside:avoid}
+#printout td.pk{font-weight:700;white-space:nowrap}
+#printout.nozh .pz{visibility:hidden}
+#printout.nozh td.pz{border-bottom:1px solid #ccc}
 </style>
 <div class="wrap">
   <header class="top"><h1>韓文學習</h1><span class="sync" id="sync">讀取中…</span></header>
@@ -386,7 +439,7 @@ h1{font-size:1.05rem;letter-spacing:.02em}
       <input id="q" type="search" placeholder="搜尋單字或片語（韓文、中文）" autocomplete="off"></label>
       <button class="ibtn" type="button" id="hidebtn" aria-pressed="false" aria-label="隱藏中文" title="隱藏中文"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>中文</span></button>
       <div class="menuwrap"><button class="ibtn" type="button" id="menubtn" aria-haspopup="menu" aria-expanded="false" aria-label="管理"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>管理</span></button>
-        <div class="menu" id="menu" role="menu" hidden><button type="button" role="menuitem" data-newword="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>新增單字</button><button type="button" role="menuitem" data-themes="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>編輯主題和小分類</button><button type="button" role="menuitem" data-perm="1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="permlab">設定編輯權限</span></button></div></div></div>
+        <div class="menu" id="menu" role="menu" hidden><button type="button" role="menuitem" data-newword="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>新增單字</button><button type="button" role="menuitem" data-themes="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>編輯主題和小分類</button><button type="button" role="menuitem" data-perm="1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="permlab">設定編輯權限</span></button><button type="button" role="menuitem" data-print="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>列印</button></div></div></div>
     <div class="themes" id="themes" role="group" aria-label="主題"></div>
     <div class="seg" id="view" role="group" aria-label="顯示" hidden></div>
     <div class="seg" id="pos" role="group" aria-label="詞性"></div>
@@ -400,6 +453,7 @@ h1{font-size:1.05rem;letter-spacing:.02em}
     <div class="shead">
       <div class="srow"><button class="back" type="button" id="back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>返回</button>
         <button class="tbtn" type="button" id="editw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>編輯</button>
+        <button class="tbtn" type="button" id="printw" aria-label="列印這個字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>列印</button>
         <div class="nav"><button type="button" id="prev" aria-label="上一個字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" id="next" aria-label="下一個字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div></div>
       <div class="tabs" id="tabs" role="tablist"></div>
     </div>
@@ -428,6 +482,15 @@ h1{font-size:1.05rem;letter-spacing:.02em}
   <form id="permform"><input id="permtok" class="sel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"><button class="aigo" type="submit">儲存</button></form>
   <p class="aidesc" id="permmsg" aria-live="polite"></p>
 </div></div>
+<div class="askbg" id="prdlg" hidden role="dialog" aria-modal="true" aria-labelledby="prttl"><div class="aibox prdlg">
+  <div class="aihead"><h2 id="prttl">列印</h2><button class="x" type="button" id="prclose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <p class="prscope" id="prscope"></p>
+  <fieldset><legend>樣式</legend><label><input type="radio" name="prmode" value="full" checked> 完整內容</label><label><input type="radio" name="prmode" value="list"> 單字表（一行一個）</label></fieldset>
+  <fieldset id="prparts"><legend>包含</legend><label><input type="checkbox" data-pp="ex" checked> 例句</label><label><input type="checkbox" data-pp="ph" checked> 片語</label><label><input type="checkbox" data-pp="rel" checked> 近反義</label><label><input type="checkbox" data-pp="form" checked> 變化</label></fieldset>
+  <fieldset><legend>自我測驗</legend><label><input type="checkbox" id="prnozh"> 中文留空白</label></fieldset>
+  <button class="aigo" type="button" id="prgo">列印</button>
+</div></div>
+<div id="printout"></div>
 <style>
 .lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}
 .lockbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 20px;width:min(340px,100%);display:grid;gap:10px}
