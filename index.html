@@ -402,41 +402,46 @@ body.prview #printout{display:block;position:fixed;inset:0;z-index:90;overflow-y
   #printout{display:block!important;color:#111;position:static!important;overflow:visible!important;padding:0!important;font-size:10.5pt!important}
   body.prview{overflow:visible!important}
 }
-#printout{font-family:var(--ui)}
-#printout .pko{font-family:var(--ko)}
-#printout h1{font-size:15pt;margin:0 0 2px;color:#111}
-#printout .pmeta{color:#666;font-size:9pt;margin-bottom:10px}
-#printout h2{font-size:12pt;margin:14px 0 6px;padding-bottom:2px;border-bottom:1.5px solid #5f6638;color:#5f6638;break-after:avoid}
-#printout .pent{padding:8px 0 9px;border-bottom:1px solid #ccc;break-inside:avoid}
-#printout .pent.long{break-inside:auto}
-#printout .phd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;break-after:avoid}
-#printout .phd b{font-size:14pt}
-#printout .ppr{color:#555}
-#printout .ppos{font-size:8.5pt;border:1px solid #999;border-radius:8px;padding:0 6px;color:#444}
+#printout,#prpdf{font-family:var(--ui)}
+#prpdf{position:absolute;left:0;top:0;z-index:-1;width:718px;background:#fff;color:#111;font-size:14px;line-height:1.5}
+#prbar .prbtns{display:flex;gap:6px}
+.prdlg .prgo2{display:flex;gap:8px}.prdlg .prgo2 .aigo{text-align:center;justify-content:center}.prdlg .prgo2 .aigo{flex:1}
+.prdlg .aigo.alt{background:var(--accent-soft);color:var(--accent)}
+#prbar .save.ready{background:var(--warm)}
+:is(#printout,#prpdf) .pko{font-family:var(--ko)}
+:is(#printout,#prpdf) h1{font-size:15pt;margin:0 0 2px;color:#111}
+:is(#printout,#prpdf) .pmeta{color:#666;font-size:9pt;margin-bottom:10px}
+:is(#printout,#prpdf) h2{font-size:12pt;margin:14px 0 6px;padding-bottom:2px;border-bottom:1.5px solid #5f6638;color:#5f6638;break-after:avoid}
+:is(#printout,#prpdf) .pent{padding:8px 0 9px;border-bottom:1px solid #ccc;break-inside:avoid}
+:is(#printout,#prpdf) .pent.long{break-inside:auto}
+:is(#printout,#prpdf) .phd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;break-after:avoid}
+:is(#printout,#prpdf) .phd b{font-size:14pt}
+:is(#printout,#prpdf) .ppr{color:#555}
+:is(#printout,#prpdf) .ppos{font-size:8.5pt;border:1px solid #999;border-radius:8px;padding:0 6px;color:#444}
 #printout ol.pmn{margin:3px 0 2px;padding-left:20px}
-#printout .plab{font-size:8.5pt;font-weight:700;color:#5f6638;margin:6px 0 1px;letter-spacing:.05em;break-after:avoid}
-#printout .pex{margin:1px 0 3px 12px;break-inside:avoid}
-#printout .pex .pz,#printout .pex .pn{color:#555;font-size:9.5pt}
-#printout .pex .pn{font-style:italic}
-#printout .hl{color:#c0392b;font-weight:700}
-#printout .pph{margin:4px 0 2px 4px;break-inside:avoid}
-#printout .pph>.pl{font-weight:700}
-#printout .pph .yo{font-weight:400;color:#555}
-#printout .pexp{margin:0 0 1px 12px;font-size:9.5pt;color:#333}
-#printout .prel{margin:2px 0 1px 12px}
-#printout .prel .rt{font-size:8pt;border:1px solid #999;border-radius:6px;padding:0 4px;margin-right:4px;color:#444}
-#printout .prel .pex{margin-left:24px}
-#printout .pforms{display:flex;flex-wrap:wrap;gap:2px 14px;margin-left:12px;font-size:9.5pt}
-#printout .pforms small{color:#666;margin-right:3px}
-#printout table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}
-#printout table.tw th:nth-child(1){width:20%}#printout table.tw th:nth-child(2){width:17%}#printout table.tw th:nth-child(3){width:11%}
-#printout table.tp th:nth-child(1){width:42%}#printout table.tp th:nth-child(3){width:16%}
-#printout th,#printout td{border-bottom:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}
-#printout th{font-size:8.5pt;color:#666;border-bottom:1.5px solid #888}
-#printout tr{break-inside:avoid}
+:is(#printout,#prpdf) .plab{font-size:8.5pt;font-weight:700;color:#5f6638;margin:6px 0 1px;letter-spacing:.05em;break-after:avoid}
+:is(#printout,#prpdf) .pex{margin:1px 0 3px 12px;break-inside:avoid}
+:is(#printout,#prpdf) .pex .pz,:is(#printout,#prpdf) .pex .pn{color:#555;font-size:9.5pt}
+:is(#printout,#prpdf) .pex .pn{font-style:italic}
+:is(#printout,#prpdf) .hl{color:#c0392b;font-weight:700}
+:is(#printout,#prpdf) .pph{margin:4px 0 2px 4px;break-inside:avoid}
+:is(#printout,#prpdf) .pph>.pl{font-weight:700}
+:is(#printout,#prpdf) .pph .yo{font-weight:400;color:#555}
+:is(#printout,#prpdf) .pexp{margin:0 0 1px 12px;font-size:9.5pt;color:#333}
+:is(#printout,#prpdf) .prel{margin:2px 0 1px 12px}
+:is(#printout,#prpdf) .prel .rt{font-size:8pt;border:1px solid #999;border-radius:6px;padding:0 4px;margin-right:4px;color:#444}
+:is(#printout,#prpdf) .prel .pex{margin-left:24px}
+:is(#printout,#prpdf) .pforms{display:flex;flex-wrap:wrap;gap:2px 14px;margin-left:12px;font-size:9.5pt}
+:is(#printout,#prpdf) .pforms small{color:#666;margin-right:3px}
+:is(#printout,#prpdf) table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}
+:is(#printout,#prpdf) table.tw th:nth-child(1){width:20%}:is(#printout,#prpdf) table.tw th:nth-child(2){width:17%}:is(#printout,#prpdf) table.tw th:nth-child(3){width:11%}
+:is(#printout,#prpdf) table.tp th:nth-child(1){width:42%}:is(#printout,#prpdf) table.tp th:nth-child(3){width:16%}
+:is(#printout,#prpdf) th,:is(#printout,#prpdf) td{border-bottom:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}
+:is(#printout,#prpdf) th{font-size:8.5pt;color:#666;border-bottom:1.5px solid #888}
+:is(#printout,#prpdf) tr{break-inside:avoid}
 #printout td.pk{font-weight:700;white-space:nowrap}
-#printout.nozh .pz{visibility:hidden}
-#printout.nozh td.pz{border-bottom:1px solid #ccc}
+:is(#printout,#prpdf).nozh .pz{visibility:hidden}
+:is(#printout,#prpdf).nozh td.pz{border-bottom:1px solid #ccc}
 </style>
 <div class="wrap">
   <header class="top"><h1>韓文學習</h1><span class="sync" id="sync">讀取中…</span></header>
@@ -495,9 +500,9 @@ body.prview #printout{display:block;position:fixed;inset:0;z-index:90;overflow-y
   <fieldset><legend>樣式</legend><label><input type="radio" name="prmode" value="full" checked> 完整內容</label><label><input type="radio" name="prmode" value="list"> 單字表（一行一個）</label></fieldset>
   <fieldset id="prparts"><legend>包含</legend><label><input type="checkbox" data-pp="ex" checked> 例句</label><label><input type="checkbox" data-pp="ph" checked> 片語</label><label><input type="checkbox" data-pp="rel" checked> 近反義</label><label><input type="checkbox" data-pp="form" checked> 變化</label></fieldset>
   <fieldset><legend>自我測驗</legend><label><input type="checkbox" id="prnozh"> 中文留空白</label></fieldset>
-  <button class="aigo" type="button" id="prgo">列印</button>
+  <div class="prgo2"><button class="aigo" type="button" id="prgo">列印</button><button class="aigo alt" type="button" id="prpdfgo">下載 PDF</button></div>
 </div></div>
-<div id="prbar"><button class="back" type="button" id="prx">關閉</button><span class="prtip">沒跳出列印畫面的話：Safari 下方「分享」→「列印」</span><button class="save" type="button" id="prnow">列印</button></div>
+<div id="prbar"><button class="back" type="button" id="prx">關閉</button><span class="prtip" id="prtip"></span><span class="prbtns"><button class="tbtn" type="button" id="prpdf2">下載 PDF</button><button class="save" type="button" id="prnow">列印</button></span></div>
 <div id="printout"></div>
 <style>
 .lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;place-items:center;padding:16px}

@@ -632,16 +632,53 @@ function openPrint(){PRJOB=prScope();const n=PRJOB.groups.reduce((a,g)=>a+g.item
   if(PRJOB.one)prdlg.querySelector("[name=prmode][value=full]").checked=true;
   prdlg.querySelectorAll("[name=prmode]").forEach(r=>r.closest("fieldset").hidden=!!PRJOB.one);
   document.getElementById("prscope").textContent=PRJOB.one?`「${PRJOB.title}」這個字`:`${PRJOB.title}・${n} 個${PRJOB.phrases?"片語":"字"}`;
-  prSync();prdlg.hidden=false}
+  prSync();prState();prdlg.hidden=false}
 prdlg.addEventListener("change",prSync);
 document.getElementById("prclose").onclick=()=>prdlg.hidden=true;
 prdlg.addEventListener("click",e=>{if(e.target===prdlg)prdlg.hidden=true});
 document.getElementById("prgo").onclick=()=>{const o=prOpts();try{localStorage.setItem(PRK,JSON.stringify(o))}catch(e){}
-  prBuild(PRJOB,o);prdlg.hidden=true;PRJOB.done=true;prShow();doPrint()};
+  prBuild(PRJOB,o);prdlg.hidden=true;PRJOB.done=true;prShow();if(!STANDALONE)doPrint()};
+document.getElementById("prpdfgo").onclick=()=>{const o=prOpts();try{localStorage.setItem(PRK,JSON.stringify(o))}catch(e){}
+  prBuild(PRJOB,o);prdlg.hidden=true;prShow();makePdf()};
 /* print() must run inside the tap itself: iPhone Safari ignores it after a timer */
 function doPrint(){try{window.print()}catch(e){}}
-function prShow(){document.body.classList.add("prview");printout.scrollTop=0}
-document.getElementById("prx").onclick=()=>{document.body.classList.remove("prview");PRJOB=null};
+function prShow(){document.body.classList.add("prview");printout.scrollTop=0;PDF=null;prState()}
+/* home-screen web app (iPhone): window.print() does nothing there, so it is PDF → 分享 → 列印 */
+const STANDALONE=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
+const prTip=document.getElementById("prtip"),prPdfBtn=document.getElementById("prpdf2");
+let PDF=null,pdfBusy=false;
+function prState(msg){document.getElementById("prnow").hidden=STANDALONE;document.getElementById("prgo").hidden=STANDALONE;document.getElementById("prpdfgo").classList.toggle("alt",!STANDALONE);
+  prTip.textContent=msg||(PDF?(PDF.share?"PDF 好了，按「儲存／分享」可以存檔或列印":"PDF 已下載"):STANDALONE?"主畫面版不能直接列印：先下載 PDF，再從分享選單選「列印」":"沒跳出列印畫面的話：Safari 下方「分享」→「列印」");
+  prPdfBtn.textContent=PDF&&PDF.share?"儲存／分享":"下載 PDF";prPdfBtn.className=PDF&&PDF.share?"save ready":"tbtn";prPdfBtn.disabled=pdfBusy}
+const loadJs=src=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`)&&loadJs[src])return ok();const s=document.createElement("script");s.src=src;s.onload=()=>{loadJs[src]=1;ok()};s.onerror=()=>no(new Error("load "+src));document.head.appendChild(s)});
+/* PDF: lay the printout out at A4 width in #prpdf, cut pages at block edges, snapshot each page (html2canvas) into jsPDF. Text is a picture, fonts are the phone's own. */
+async function makePdf(){if(pdfBusy)return;pdfBusy=true;PDF=null;prState("準備中…");let box;
+  try{await loadJs("lib/html2canvas.min.js");await loadJs("lib/jspdf.umd.min.js");
+    box=document.createElement("div");box.id="prpdf";box.className=printout.className;box.innerHTML=printout.innerHTML;document.body.appendChild(box);
+    await (document.fonts&&document.fonts.ready);
+    const W=718,MM=186/W,PH=Math.floor(267/MM),top0=box.getBoundingClientRect().top;
+    const total=box.scrollHeight,cuts=[...new Set([...box.querySelectorAll("h1,h2,.pmeta,.pent,.phd,.pmn li,.pex,.pph,.pexp,.prel,.pforms,tr")].map(e=>Math.round(e.getBoundingClientRect().top-top0)))].sort((a,b)=>a-b);
+    /* never end a page right after a heading / section label */
+    const sticky=new Set([...box.querySelectorAll("h2,.plab,.phd")].map(e=>Math.round(e.getBoundingClientRect().bottom-top0)));
+    const R=e=>e.getBoundingClientRect(),bad=[...box.querySelectorAll(".pent")].map(e=>{const l=e.querySelector(".pmn")||e.querySelector(".phd");return l?[R(e).top-top0+2,R(l).bottom-top0+30]:null}).filter(Boolean);
+    const pages=[];let y=0;while(y<total-2){let end=Math.min(total,y+PH);if(end<total){const ok=cuts.filter(c=>c>y+PH*.4&&c<=end&&![...sticky].some(s=>Math.abs(s-c)<14)&&!bad.some(([s,e])=>c>s&&c<e));if(ok.length)end=ok[ok.length-1]}pages.push([y,end]);y=end}
+    const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:"mm",format:"a4",compress:true});
+    const r=box.getBoundingClientRect(),bx=r.left+scrollX,by=r.top+scrollY;
+    for(let i=0;i<pages.length;i++){prState(`產生 PDF 中… ${i+1}/${pages.length} 頁`);const [a,b]=pages[i];
+      const cv=await html2canvas(box,{scale:2,backgroundColor:"#ffffff",x:bx,y:by+a,width:W,height:b-a,windowWidth:Math.max(innerWidth,W+20),logging:false});
+      if(i)pdf.addPage();pdf.addImage(cv.toDataURL("image/jpeg",.9),"JPEG",12,12,186,(b-a)*MM);
+      pdf.setFontSize(8);pdf.setTextColor(150);pdf.text(`${i+1} / ${pages.length}`,198,290,{align:"right"});cv.width=cv.height=0}
+    const name=((PRJOB&&PRJOB.title)||"單字").replace(/[\/:*?"<>|]/g,"_")+".pdf";
+    const blob=pdf.output("blob"),file=new File([blob],name,{type:"application/pdf"});
+    const share=matchMedia("(pointer:coarse)").matches&&navigator.canShare&&navigator.canShare({files:[file]});
+    PDF={file,share};window.__pdfname=name;if(!share)prSave()}
+  catch(e){console.error(e);PDF=null;pdfBusy=false;prState("PDF 做不出來："+(e&&e.message||e));return}
+  finally{if(box)box.remove()}
+  pdfBusy=false;prState()}
+function prSave(){if(!PDF)return;if(PDF.share){navigator.share({files:[PDF.file]}).catch(()=>{});return}
+  const u=URL.createObjectURL(PDF.file),a=document.createElement("a");a.href=u;a.download=PDF.file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),6e4)}
+prPdfBtn.onclick=()=>{if(PDF)prSave();else makePdf()};
+document.getElementById("prx").onclick=()=>{if(pdfBusy)return;document.body.classList.remove("prview");PRJOB=null;PDF=null};
 document.getElementById("prnow").onclick=()=>{if(PRJOB)PRJOB.done=true;doPrint()};
 /* the browser's own print (⌘P, 分享 → 列印) also gets the clean copy of what is on screen */
 addEventListener("beforeprint",()=>{if(document.body.classList.contains("prview")||(PRJOB&&PRJOB.done)){if(PRJOB)PRJOB.done=false;return}const j=prScope();if(j.groups.some(g=>g.items.length))prBuild(j,{mode:"full",ex:1,ph:1,rel:1,form:1})});
