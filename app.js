@@ -90,6 +90,10 @@ const phx=p=>`<b${sa(yoFull(p),pAud(p))}>${esc(yoFull(p))}</b>${yo(p)}`;
 const rel=(lab,a,cls)=>a.length?`<section class="rsec ${cls}"><h3 class="rh"><span>${lab}</span><small>${a.length}</small></h3><ul class="rlist">${a.map(r=>`<li><div class="rrow"><b class="rw"${sa(r.word,r.audio)}>${esc(r.word)}</b><span class="rz">${esc(r.zh)}</span>${say(r.word,r.audio)}</div>${r.note?`<div class="rn">${esc(r.note)}</div>`:""}${r.examples&&r.examples.length?`<details class="fm sm"><summary>例句（${r.examples.length}）</summary>${r.examples.map(ex).join("")}</details>`:""}</li>`).join("")}</ul></section>`:"";
 const spoken=f=>String(f||"").replace(/[()]/g," ").replace(/\//g,",").replace(/\s+/g," ").replace(/^[ ,]+|[ ,]+$/g,"");
 const topicName=x=>x.theme+(x.sub?"／"+x.sub:"");
+/* category tags (2026-11-11): current theme/sub = plain green tag; other categories = golink */
+const tTags=(ts,tk)=>{const seen=new Set();ts=(ts||[]).filter(x=>{const k=x.theme+"|"+(x.sub||"");if(seen.has(k))return false;seen.add(k);return true});
+  return ts.length?ts.map(x=>TNAMES.has(x.theme)?(x.theme===tk&&(!st.sub||!x.sub||x.sub===st.sub)?`<span class="tg cur">${esc(topicName(x))}</span>`:`<button type="button" class="tg o golink" data-go-theme="${esc(x.theme)}" data-go-sub="${esc(x.sub||"")}">${esc(topicName(x))} ›</button>`):`<span class="tg o">${esc(topicName(x))}</span>`).join(" "):`<span class="tg o">未分類</span>`};
+const phTopics=(w,ph)=>w.meanings.filter(m=>m.phrase_ids.includes(ph.id)).flatMap(m=>m.topics);
 function parts(w,tk){
   const mine=w.meanings.filter(m=>inT(m,tk)), rest=w.meanings.filter(m=>!inT(m,tk));
   const linked=e=>w.meanings.some(m=>m.example_ids.includes(e.id));
@@ -102,10 +106,10 @@ function parts(w,tk){
   return [
     {k:"mean",n:"意思",html:`<div class="dhead"><span class="big"${sa(w.word,w.audio)}>${esc(w.word)}</span>${w.pronunciation?`<span class="pr">${esc(w.pronunciation)}</span>`:""}${say(w.word,w.audio)}</div>
       <div class="tags">${w.pos.map(p=>`<span class="tg">${esc(p)}</span>`).join("")}${meta.map(m=>`<span class="tg o">${m}</span>`).join("")}</div>
-      <h3>意思</h3><ol class="mean">${mine.map(m=>`<li>${esc(m.zh)}</li>`).join("")}</ol>
-      ${rest.length?`<div class="other"><div class="lab">其他意思</div><ul>${rest.map(m=>`<li>${esc(m.zh)} ${m.topics.length?m.topics.map(x=>TNAMES.has(x.theme)?`<button type="button" class="tg o golink" data-go-theme="${esc(x.theme)}" data-go-sub="${esc(x.sub||"")}">${esc(topicName(x))} ›</button>`:`<span class="tg o">${esc(topicName(x))}</span>`).join(" "):`<span class="tg o">未分類</span>`}</li>`).join("")}</ul></div>`:""}
+      <h3>意思</h3><ol class="mean">${mine.map(m=>`<li>${esc(m.zh)} ${tTags(m.topics,tk)}</li>`).join("")}</ol>
+      ${rest.length?`<div class="other"><div class="lab">其他意思</div><ul>${rest.map(m=>`<li>${esc(m.zh)} ${tTags(m.topics,tk)}</li>`).join("")}</ul></div>`:""}
       ${exs.length?`<details class="fm"><summary>例句（${exs.length}）</summary>${exs.map(ex).join("")}</details>`:""}`},
-    {k:"ph",n:"片語",c:phs.length,html:phs.map(ph=>`<div class="phc" id="ph-${esc(ph.id)}"><div class="pt">${phx(ph)}<span>${esc(ph.zh)}</span>${say(yoFull(ph),pAud(ph))}</div>
+    {k:"ph",n:"片語",c:phs.length,html:phs.map(ph=>`<div class="phc" id="ph-${esc(ph.id)}"><div class="pt">${phx(ph)}<span>${esc(ph.zh)}</span>${say(yoFull(ph),pAud(ph))}</div>${phTopics(w,ph).length?`<div class="ptag">${tTags(phTopics(w,ph),tk)}</div>`:""}
       ${ph.explanation?`<p style="margin:4px 0 6px;font-size:.88rem">${esc(ph.explanation)}</p>`:""}${ph.examples.length+ph.similar.length+ph.opposite.length?`<details class="fm sm"><summary>例句${ph.similar.length+ph.opposite.length?"・相似相反":""}</summary>${ph.examples.length&&ph.similar.length+ph.opposite.length?`<div class="sublab">例句</div>`:""}${ph.examples.map(ex).join("")}
       ${ph.similar.map(s=>relBox("sim","相似",s)).join("")}${ph.opposite.map(s=>relBox("opp","相反",s)).join("")}</details>`:""}</div>`).join("")||`<p class="note" style="padding-top:12px">還沒有片語</p>`},
     {k:"rel",n:"近反義",c:w.synonyms.length+w.antonyms.length,html:rels?`<div class="rels">${rels}</div>`:`<p class="note" style="padding-top:12px">還沒有近義詞或反義詞</p>`},
