@@ -661,7 +661,11 @@ async function makePdf(){if(pdfBusy)return;pdfBusy=true;PDF=null;prState("準備
     /* never end a page right after a heading / section label */
     const sticky=new Set([...box.querySelectorAll("h2,.plab,.phd")].map(e=>Math.round(e.getBoundingClientRect().bottom-top0)));
     const R=e=>e.getBoundingClientRect(),bad=[...box.querySelectorAll(".pent")].map(e=>{const l=e.querySelector(".pmn")||e.querySelector(".phd");return l?[R(e).top-top0+2,R(l).bottom-top0+30]:null}).filter(Boolean);
-    const pages=[];let y=0;while(y<total-2){let end=Math.min(total,y+PH);if(end<total){const ok=cuts.filter(c=>c>y+PH*.4&&c<=end&&![...sticky].some(s=>Math.abs(s-c)<14)&&!bad.some(([s,e])=>c>s&&c<e));if(ok.length)end=ok[ok.length-1]}pages.push([y,end]);y=end}
+    /* a word (or phrase / table row) moves whole to the next page; only one taller than a page is cut inside. A section title stays with the word after it. */
+    const head=e=>{let t=e;if(e.tagName==="TR"){if(e!==e.closest("tbody").firstElementChild)return e;t=e.closest("table")}const h=t.previousElementSibling;return h&&h.tagName==="H2"?h:t};
+    const starts=[...new Set([...box.querySelectorAll(".pent,tbody tr")].map(e=>Math.round(R(head(e)).top-top0)))].sort((a,b)=>a-b);
+    const pages=[];let y=0;while(y<total-2){let end=Math.min(total,y+PH);if(end<total){const whole=starts.filter(c=>c>y+2&&c<=end);if(whole.length)end=whole[whole.length-1];else{
+        const ok=cuts.filter(c=>c>y+PH*.4&&c<=end&&![...sticky].some(s=>Math.abs(s-c)<14)&&!bad.some(([s,e])=>c>s&&c<e));if(ok.length)end=ok[ok.length-1]}}pages.push([y,end]);y=end}
     const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:"mm",format:"a4",compress:true});
     const r=box.getBoundingClientRect(),bx=r.left+scrollX,by=r.top+scrollY;
     for(let i=0;i<pages.length;i++){prState(`產生 PDF 中… ${i+1}/${pages.length} 頁`);const [a,b]=pages[i];
