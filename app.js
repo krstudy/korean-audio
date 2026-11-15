@@ -139,7 +139,8 @@ function posTabs(pool){const P=document.getElementById("pos");P.hidden=false;con
   P.innerHTML=[null,...POS0,...extra].map(p=>`<button type="button" data-p="${esc(p??"")}" aria-pressed="${st.pos===p}">${esc(p??"全部")}<small>${pool.filter(w=>!p||w.pos.includes(p)).length}</small></button>`).join("")}
 function kTabs(pool){const K=document.getElementById("kf");K.hidden=false;
   K.innerHTML=[[null,"全部"],["u","還不會"],["k","會了"]].map(([k,n])=>`<button type="button" data-k="${k??""}" aria-pressed="${st.kf===k}">${n}<small>${pool.filter(w=>!k||(k==="k"?isK(w):!isK(w))).length}</small></button>`).join("")}
-function draw(){
+function draw(){const p0=st.pos,ph=st.view==="phrase";if(ph)st.pos=null;try{draw0()}finally{st.pos=p0}if(ph)document.getElementById("pos").hidden=true}
+function draw0(){
   const q=st.q.trim(), T=document.getElementById("themes"), out=document.getElementById("out");
   st.visible=[];
   const loose=w=>{const p=st.pos,k=st.kf;st.pos=null;st.kf=null;const m=match(w);st.pos=p;st.kf=k;return m};
