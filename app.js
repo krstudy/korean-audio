@@ -363,6 +363,7 @@ async function autoFill(){
 
 規則：
 - 所有中文用繁體中文（台灣用語）。
+- 列舉好幾個韓文（例如說明裡舉例）時用「, 」分開，不要用中文頓號「、」；中文之間才用「、」。
 - pronunciation：實際發音（韓文，例如 "[먹따]"），跟拼寫一樣就填 null。不要羅馬拼音，不要解釋發音。
 - origin_type 填 固有語／漢字詞／外來語；漢字詞的 hanja 填漢字，其他填 null；level 填 TOPIK I（初級）或 TOPIK II（中級）或 TOPIK II（高級）。
 - meanings：常用意思 1–3 個，每個有 zh、example_ids、phrase_ids（引用下面 examples 和 phrases 的 id）。不要 topics 欄位。
